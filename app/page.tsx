@@ -150,7 +150,7 @@ const Home = () => {
         {/* History Table */}
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-orange-400">Watch History</h2>
+            <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
             {watchHistory.length > 0 && (
               <div className="flex gap-2">
                 {showConfirm ? (
@@ -224,6 +224,11 @@ const Home = () => {
           )}
         </div>
       </div>
+      <footer className="mt-8 text-center">
+        <p className="text-gray-400 text-sm">
+          Developed by <span className="text-orange-400 font-semibold">Koushik Ahmed</span>
+        </p>
+      </footer>
     </div>
   );
 };
