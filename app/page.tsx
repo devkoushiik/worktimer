@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { quotes, Quote } from './data/quotes';
 
 interface WatchRecord {
   id: number;
@@ -17,11 +18,6 @@ interface MonthStats {
   totalSeconds: number;
 }
 
-interface Quote {
-  content: string;
-  author: string;
-}
-
 const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -32,19 +28,15 @@ const Home = () => {
   const [currentQuote, setCurrentQuote] = useState<Quote>({ content: '', author: '' });
   const [isLoadingQuote, setIsLoadingQuote] = useState(true);
 
-  // Fetch random quote
+  // Get random quote
   useEffect(() => {
-    const fetchQuote = async () => {
+    const getRandomQuote = () => {
+      setIsLoadingQuote(true);
       try {
-        setIsLoadingQuote(true);
-        const response = await fetch('https://api.quotable.io/random?tags=productivity|success|work');
-        const data = await response.json();
-        setCurrentQuote({
-          content: data.content,
-          author: data.author
-        });
+        const randomIndex = Math.floor(Math.random() * quotes.length);
+        setCurrentQuote(quotes[randomIndex]);
       } catch (error) {
-        console.error('Error fetching quote:', error);
+        console.error('Error getting quote:', error);
         setCurrentQuote({
           content: "The only way to do great work is to love what you do.",
           author: "Steve Jobs"
@@ -54,7 +46,7 @@ const Home = () => {
       }
     };
 
-    fetchQuote();
+    getRandomQuote();
   }, []);
 
   // Format date to DD:MM:YYYY
@@ -369,39 +361,6 @@ const Home = () => {
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
-            {watchHistory.length > 0 && (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleExportPDF}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  Export PDF
-                </button>
-                {showConfirm ? (
-                  <>
-                    <button
-                      onClick={handleDestroyData}
-                      className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
-                    >
-                      Confirm Delete
-                    </button>
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleDestroyData}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                  >
-                    Destroy All Data
-                  </button>
-                )}
-              </div>
-            )}
           </div>
           {watchHistory.length === 0 ? (
             <div className="text-center py-8">
@@ -443,6 +402,39 @@ const Home = () => {
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-4 mt-6">
+                <button
+                  onClick={handleExportPDF}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                >
+                  Export PDF
+                </button>
+                {showConfirm ? (
+                  <>
+                    <button
+                      onClick={handleDestroyData}
+                      className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                    >
+                      Confirm Delete
+                    </button>
+                    <button
+                      onClick={() => setShowConfirm(false)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleDestroyData}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                  >
+                    Destroy All Data
+                  </button>
+                )}
               </div>
             </>
           )}
