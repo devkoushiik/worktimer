@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { quotes, Quote } from './data/quotes';
+import { FaGithub } from 'react-icons/fa';
 
 interface WatchRecord {
   id: number;
@@ -263,205 +264,223 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-4">
-      <div className='flex gap-2'>
-        <span className='text-3xl'>⌛</span><h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
-           Work Timer
-        </h1>
-      </div>
-
-      {/* Motivational Quote Section */}
-      <div className="w-full max-w-4xl mb-8 text-center">
-        <div className="relative p-[1px] rounded-lg">
+    <div className="min-h-screen flex flex-col bg-gray-900">
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50">
+        <div className="relative">
           {/* Gradient Border */}
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
           
-          {/* Blurry Gradient Background */}
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+          {/* Blurry Background */}
+          <div className="absolute inset-0 bg-gray-900/95 backdrop-blur-md"></div>
           
-          {/* Content Container */}
-          <div className="relative bg-gray-800/90 p-6 rounded-lg">
-            {isLoadingQuote ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
+          {/* Content */}
+          <div className="relative flex items-center justify-center px-6 py-4">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl">⌛</span>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
+                Work Timer
+              </h1>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 mt-20">
+        {/* Motivational Quote Section */}
+        <div className="w-full max-w-4xl mb-8 text-center">
+          <div className="relative p-[1px] rounded-lg">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+            
+            {/* Blurry Gradient Background */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+            
+            {/* Content Container */}
+            <div className="relative bg-gray-800/90 p-6 rounded-lg">
+              {isLoadingQuote ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xl text-orange-400 italic mb-2">"{currentQuote.content}"</p>
+                  <p className="text-white">- {currentQuote.author}</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Month Pins Section */}
+        {monthStats.length > 0 && (
+          <div className="w-full max-w-4xl mb-8">
+            <div className='flex gap-2 items-center justify-center mb-4'>
+              <span className='text-3xl'>🔥</span>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
+                Monthly Progress
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {monthStats.map((stat) => (
+                <div
+                  key={`${stat.month}-${stat.year}`}
+                  className="relative p-[1px] rounded-lg"
+                >
+                  {/* Gradient Border */}
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+                  
+                  {/* Blurry Gradient Background */}
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+                  
+                  {/* Content Container */}
+                  <div className="relative bg-gray-800/90 p-4 rounded-lg">
+                    <h3 className="text-xl font-bold text-orange-400">{stat.month} {stat.year}</h3>
+                    <p className="text-gray-300 mt-2">
+                      Total Time: <span className="text-green-400 font-semibold">{formatTimeInterval(stat.totalSeconds)}</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl border border-orange-500/20">
+          <div className="text-4xl font-bold text-center mb-6 text-orange-400">
+            {formatTime(time)}
+          </div>
+          <div className="flex gap-4 justify-center mb-8">
+            {!isRunning && !isDone && (
+              <button
+                onClick={handleStart}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+              >
+                Start
+              </button>
+            )}
+            {isRunning && (
+              <button
+                onClick={handlePause}
+                className="px-4 py-2 bg-orange-400 text-gray-900 rounded hover:bg-orange-300 transition-colors"
+              >
+                Pause
+              </button>
+            )}
+            {time > 0 && !isDone && (
+              <button
+                onClick={handleDone}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              >
+                Done
+              </button>
+            )}
+          </div>
+
+          {/* History Table */}
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
+            </div>
+            {watchHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
               </div>
             ) : (
               <>
-                <p className="text-xl text-orange-400 italic mb-2">"{currentQuote.content}"</p>
-                <p className="text-white">- {currentQuote.author}</p>
+                <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
+                  You have worked for {formatTotalTime(totalTimeInSeconds)} in total
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-gray-800 border border-orange-500/20">
+                    <thead>
+                      <tr className="bg-gray-700">
+                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
+                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
+                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
+                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-300">
+                      {watchHistory.map((record) => (
+                        <tr key={record.id} className="hover:bg-gray-700">
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-700">
+                      <tr>
+                        <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                          Total Days: {totalDays}
+                        </td>
+                        <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                          Total Time: {formatTime(totalTimeInSeconds)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-center gap-4 mt-6">
+                  <button
+                    onClick={handleExportPDF}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                  >
+                    Export PDF
+                  </button>
+                  {showConfirm ? (
+                    <>
+                      <button
+                        onClick={handleDestroyData}
+                        className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                      >
+                        Confirm Delete
+                      </button>
+                      <button
+                        onClick={() => setShowConfirm(false)}
+                        className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleDestroyData}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                    >
+                      Destroy All Data
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>
         </div>
+        <footer className="mt-8 text-center">
+          <p className="text-gray-400 text-sm">
+            Developed by <span className="text-orange-400 font-semibold">Koushik Ahmed</span>
+          </p>
+        </footer>
+
+        {/* Add this to your global CSS or style tag */}
+        <style jsx global>{`
+          @keyframes gradient-x {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient-x {
+            background-size: 200% 200%;
+            animation: gradient-x 15s ease infinite;
+          }
+        `}</style>
       </div>
-
-      {/* Month Pins Section */}
-      {monthStats.length > 0 && (
-        <div className="w-full max-w-4xl mb-8">
-          <div className='flex gap-2 items-center justify-center mb-4'>
-            <span className='text-3xl'>🔥</span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
-              Monthly Progress
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {monthStats.map((stat) => (
-              <div
-                key={`${stat.month}-${stat.year}`}
-                className="relative p-[1px] rounded-lg"
-              >
-                {/* Gradient Border */}
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
-                
-                {/* Blurry Gradient Background */}
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
-                
-                {/* Content Container */}
-                <div className="relative bg-gray-800/90 p-4 rounded-lg">
-                  <h3 className="text-xl font-bold text-orange-400">{stat.month} {stat.year}</h3>
-                  <p className="text-gray-300 mt-2">
-                    Total Time: <span className="text-green-400 font-semibold">{formatTimeInterval(stat.totalSeconds)}</span>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl border border-orange-500/20">
-        <div className="text-4xl font-bold text-center mb-6 text-orange-400">
-          {formatTime(time)}
-        </div>
-        <div className="flex gap-4 justify-center mb-8">
-          {!isRunning && !isDone && (
-            <button
-              onClick={handleStart}
-              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
-            >
-              Start
-            </button>
-          )}
-          {isRunning && (
-            <button
-              onClick={handlePause}
-              className="px-4 py-2 bg-orange-400 text-gray-900 rounded hover:bg-orange-300 transition-colors"
-            >
-              Pause
-            </button>
-          )}
-          {time > 0 && !isDone && (
-            <button
-              onClick={handleDone}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-            >
-              Done
-            </button>
-          )}
-        </div>
-
-        {/* History Table */}
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
-          </div>
-          {watchHistory.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
-            </div>
-          ) : (
-            <>
-              <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
-                You have worked for {formatTotalTime(totalTimeInSeconds)} in total
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-gray-800 border border-orange-500/20">
-                  <thead>
-                    <tr className="bg-gray-700">
-                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
-                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
-                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
-                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-gray-300">
-                    {watchHistory.map((record) => (
-                      <tr key={record.id} className="hover:bg-gray-700">
-                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
-                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
-                        <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-700">
-                    <tr>
-                      <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                        Total Days: {totalDays}
-                      </td>
-                      <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                        Total Time: {formatTime(totalTimeInSeconds)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-center gap-4 mt-6">
-                <button
-                  onClick={handleExportPDF}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  Export PDF
-                </button>
-                {showConfirm ? (
-                  <>
-                    <button
-                      onClick={handleDestroyData}
-                      className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
-                    >
-                      Confirm Delete
-                    </button>
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleDestroyData}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                  >
-                    Destroy All Data
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      <footer className="mt-8 text-center">
-        <p className="text-gray-400 text-sm">
-          Developed by <span className="text-orange-400 font-semibold">Koushik Ahmed</span>
-        </p>
-      </footer>
-
-      {/* Add this to your global CSS or style tag */}
-      <style jsx global>{`
-        @keyframes gradient-x {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-gradient-x {
-          background-size: 200% 200%;
-          animation: gradient-x 15s ease infinite;
-        }
-      `}</style>
     </div>
   );
 };
