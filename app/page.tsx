@@ -17,6 +17,11 @@ interface MonthStats {
   totalSeconds: number;
 }
 
+interface Quote {
+  content: string;
+  author: string;
+}
+
 const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -24,6 +29,33 @@ const Home = () => {
   const [watchHistory, setWatchHistory] = useState<WatchRecord[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [monthStats, setMonthStats] = useState<MonthStats[]>([]);
+  const [currentQuote, setCurrentQuote] = useState<Quote>({ content: '', author: '' });
+  const [isLoadingQuote, setIsLoadingQuote] = useState(true);
+
+  // Fetch random quote
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        setIsLoadingQuote(true);
+        const response = await fetch('https://api.quotable.io/random?tags=productivity|success|work');
+        const data = await response.json();
+        setCurrentQuote({
+          content: data.content,
+          author: data.author
+        });
+      } catch (error) {
+        console.error('Error fetching quote:', error);
+        setCurrentQuote({
+          content: "The only way to do great work is to love what you do.",
+          author: "Steve Jobs"
+        });
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+
+    fetchQuote();
+  }, []);
 
   // Format date to DD:MM:YYYY
   const formatDate = (date: Date): string => {
@@ -143,6 +175,7 @@ const Home = () => {
   const handleStart = () => {
     setIsRunning(true);
     setIsDone(false);
+    setTime(0); // Reset time when starting new session
   };
 
   const handlePause = () => {
@@ -168,6 +201,10 @@ const Home = () => {
       
       // Reset timer
       setTime(0);
+      // Reset isDone after a short delay to allow the user to see the completion
+      setTimeout(() => {
+        setIsDone(false);
+      }, 1000);
     }
   };
 
@@ -235,6 +272,31 @@ const Home = () => {
         <span className='text-3xl'>⌛</span><h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
            Work Timer
         </h1>
+      </div>
+
+      {/* Motivational Quote Section */}
+      <div className="w-full max-w-4xl mb-8 text-center">
+        <div className="relative p-[1px] rounded-lg">
+          {/* Gradient Border */}
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+          
+          {/* Blurry Gradient Background */}
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/20 via-green-500/20 to-orange-500/20 backdrop-blur-sm"></div>
+          
+          {/* Content Container */}
+          <div className="relative bg-gray-800/80 p-6 rounded-lg">
+            {isLoadingQuote ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
+              </div>
+            ) : (
+              <>
+                <p className="text-xl text-orange-400 italic mb-2">"{currentQuote.content}"</p>
+                <p className="text-white">- {currentQuote.author}</p>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Month Pins Section */}
@@ -379,6 +441,19 @@ const Home = () => {
           Developed by <span className="text-orange-400 font-semibold">Koushik Ahmed</span>
         </p>
       </footer>
+
+      {/* Add this to your global CSS or style tag */}
+      <style jsx global>{`
+        @keyframes gradient-x {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-gradient-x {
+          background-size: 200% 200%;
+          animation: gradient-x 15s ease infinite;
+        }
+      `}</style>
     </div>
   );
 };
