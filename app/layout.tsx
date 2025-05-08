@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Work Timer",
-  description: "This app is a simple work timer that allows you to track your work time.",
+  description: "Track your work time efficiently",
   icons: {
     icon: '/icon.png',
   }
