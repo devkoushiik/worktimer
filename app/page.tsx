@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface WatchRecord {
   id: number;
@@ -114,6 +116,46 @@ const Home = () => {
   const totalDays = new Set(watchHistory.map(record => record.date)).size;
   const totalTimeInSeconds = watchHistory.reduce((acc, record) => acc + record.time, 0);
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text('Work Timer History', 14, 15);
+    
+    // Add summary
+    doc.setFontSize(12);
+    doc.text(`Total Days: ${totalDays}`, 14, 25);
+    doc.text(`Total Time: ${formatTime(totalTimeInSeconds)}`, 14, 32);
+    
+    // Create table
+    const tableColumn = ['ID', 'Date', 'Day', 'Time'];
+    const tableRows = watchHistory.map(record => [
+      record.id,
+      record.date,
+      record.dayOfWeek,
+      formatTime(record.time)
+    ]);
+    
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      theme: 'grid',
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [255, 165, 0], // Orange color
+        textColor: [0, 0, 0],
+      },
+    });
+    
+    // Save the PDF
+    doc.save('work-timer-history.pdf');
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-4">
       <div className='flex gap-2'>
@@ -158,6 +200,12 @@ const Home = () => {
             <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
             {watchHistory.length > 0 && (
               <div className="flex gap-2">
+                <button
+                  onClick={handleExportPDF}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                >
+                  Export PDF
+                </button>
                 {showConfirm ? (
                   <>
                     <button
