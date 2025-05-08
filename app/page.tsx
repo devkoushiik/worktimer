@@ -463,6 +463,14 @@ const Home = () => {
           </div>
         </div>
         <footer className="mt-8 text-center">
+          <a 
+            href="https://github.com/devkoushiik" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block mb-4 hover:scale-110 transition-transform"
+          >
+            <FaGithub className="text-4xl text-gray-400 hover:text-orange-400" />
+          </a>
           <p className="text-gray-400 text-sm">
             Developed by <span className="text-orange-400 font-semibold">Koushik Ahmed</span>
           </p>
