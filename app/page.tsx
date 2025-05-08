@@ -722,29 +722,29 @@ const Home = () => {
       
       {/* Secret Key Setup Modal */}
       {showSecretSetup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="relative p-[1px] rounded-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="relative p-[1px] rounded-lg w-full max-w-[90%] sm:max-w-md">
             {/* Gradient Border */}
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
             
             {/* Content Container */}
-            <div className="relative bg-gray-800/90 p-6 rounded-lg">
-              <h2 className="text-2xl font-bold text-orange-400 mb-4 text-center">
+            <div className="relative bg-gray-800/90 p-4 sm:p-6 rounded-lg">
+              <h2 className="text-xl sm:text-2xl font-bold text-orange-400 mb-2 sm:mb-4 text-center">
                 Setup Secret Key
               </h2>
-              <p className="text-gray-300 mb-4 text-center">
+              <p className="text-sm sm:text-base text-gray-300 mb-2 sm:mb-4 text-center">
                 Setup a easy password, you won't be allowed to reset later.
               </p>
-              <p className="text-orange-400 mb-4 text-center italic">
+              <p className="text-sm sm:text-base text-orange-400 mb-3 sm:mb-4 text-center italic">
                 Suggestion: It can be your computer or phone password.
               </p>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <input
                     type="password"
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
-                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
                     placeholder="Enter your secret key"
                   />
                 </div>
@@ -753,13 +753,13 @@ const Home = () => {
                     type="password"
                     value={confirmSecretKey}
                     onChange={(e) => setConfirmSecretKey(e.target.value)}
-                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
                     placeholder="Confirm your secret key"
                   />
                 </div>
                 <button
                   onClick={handleSetupSecretKey}
-                  className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                  className="w-full px-3 py-1.5 sm:px-4 sm:py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm sm:text-base"
                 >
                   Setup Secret Key
                 </button>
