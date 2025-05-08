@@ -209,16 +209,55 @@ const Home = () => {
       setIsDone(true);
       
       const now = new Date();
-      // Create new record with sequential ID
-      const newRecord: WatchRecord = {
-        id: watchHistory.length + 1,
-        date: formatDateForStorage(now),
-        dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
-        time: time
-      };
+      const formattedDate = formatDateForStorage(now);
+      const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
 
-      // Add to history
-      setWatchHistory(prev => [...prev, newRecord]);
+      // Check if there's an entry for today
+      const existingEntryIndex = watchHistory.findIndex(record => record.date === formattedDate);
+
+      if (existingEntryIndex !== -1) {
+        // Update existing entry's time
+        setWatchHistory(prev => prev.map((record, index) => 
+          index === existingEntryIndex 
+            ? { ...record, time: record.time + time }
+            : record
+        ));
+
+        toast.success('Time updated for today!', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #22C55E',
+          },
+          iconTheme: {
+            primary: '#22C55E',
+            secondary: '#fff',
+          },
+        });
+      } else {
+        // Create new record with sequential ID
+        const newRecord: WatchRecord = {
+          id: watchHistory.length + 1,
+          date: formattedDate,
+          dayOfWeek: dayOfWeek,
+          time: time
+        };
+
+        // Add to history
+        setWatchHistory(prev => [...prev, newRecord]);
+
+        toast.success('New entry added!', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #22C55E',
+          },
+          iconTheme: {
+            primary: '#22C55E',
+            secondary: '#fff',
+          },
+        });
+      }
       
       // Reset timer
       setTime(0);
