@@ -281,10 +281,10 @@ const Home = () => {
           <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
           
           {/* Blurry Gradient Background */}
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/20 via-green-500/20 to-orange-500/20 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
           
           {/* Content Container */}
-          <div className="relative bg-gray-800/80 p-6 rounded-lg">
+          <div className="relative bg-gray-800/90 p-6 rounded-lg">
             {isLoadingQuote ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
@@ -302,15 +302,27 @@ const Home = () => {
       {/* Month Pins Section */}
       {monthStats.length > 0 && (
         <div className="w-full max-w-4xl mb-8">
-          <h2 className="text-2xl font-bold text-orange-400 mb-4">Monthly Progress</h2>
+          <div className='flex gap-2 items-center justify-center mb-4'>
+            <span className='text-3xl'>🔥</span>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
+              Monthly Progress
+            </h2>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {monthStats.map((stat) => (
               <div
                 key={`${stat.month}-${stat.year}`}
-                className="relative p-4 rounded-lg bg-gray-800 overflow-hidden group"
+                className="relative p-[1px] rounded-lg"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                <div className="relative z-10">
+                {/* Gradient Border */}
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+                
+                {/* Blurry Gradient Background */}
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+                
+                {/* Content Container */}
+                <div className="relative bg-gray-800/90 p-4 rounded-lg">
                   <h3 className="text-xl font-bold text-orange-400">{stat.month} {stat.year}</h3>
                   <p className="text-gray-300 mt-2">
                     Total Time: <span className="text-green-400 font-semibold">{formatTimeInterval(stat.totalSeconds)}</span>
