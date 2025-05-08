@@ -11,20 +11,76 @@ interface WatchRecord {
   time: number;
 }
 
+interface MonthStats {
+  month: string;
+  year: number;
+  totalSeconds: number;
+}
+
 const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [watchHistory, setWatchHistory] = useState<WatchRecord[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [monthStats, setMonthStats] = useState<MonthStats[]>([]);
+
+  // Format date to DD:MM:YYYY
+  const formatDate = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}:${month}:${year}`;
+  };
 
   // Load data from localStorage on component mount
   useEffect(() => {
     const savedHistory = localStorage.getItem('watchHistory');
     if (savedHistory) {
-      setWatchHistory(JSON.parse(savedHistory));
+      const history = JSON.parse(savedHistory);
+      setWatchHistory(history);
+      calculateMonthStats(history);
     }
   }, []);
+
+  // Calculate monthly statistics
+  const calculateMonthStats = (history: WatchRecord[]) => {
+    const stats: { [key: string]: number } = {};
+    
+    history.forEach(record => {
+      // Parse the date string properly (DD:MM:YYYY)
+      const [day, month, year] = record.date.split(':');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const monthYear = `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
+      stats[monthYear] = (stats[monthYear] || 0) + record.time;
+    });
+
+    const monthStatsArray = Object.entries(stats).map(([monthYear, totalSeconds]) => {
+      const [month, year] = monthYear.split(' ');
+      return {
+        month,
+        year: parseInt(year),
+        totalSeconds: totalSeconds
+      };
+    });
+
+    // Sort by year and month
+    monthStatsArray.sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                     'July', 'August', 'September', 'October', 'November', 'December'];
+      return months.indexOf(b.month) - months.indexOf(a.month);
+    });
+
+    setMonthStats(monthStatsArray);
+  };
+
+  // Update month stats when watch history changes
+  useEffect(() => {
+    if (watchHistory.length > 0) {
+      calculateMonthStats(watchHistory);
+    }
+  }, [watchHistory]);
 
   // Save to localStorage whenever watchHistory changes
   useEffect(() => {
@@ -68,6 +124,22 @@ const Home = () => {
     }
   };
 
+  const formatTimeInterval = (seconds: number): string => {
+    if (isNaN(seconds) || seconds === undefined) return '0s';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${remainingSeconds}s`;
+    }
+  };
+
   const handleStart = () => {
     setIsRunning(true);
     setIsDone(false);
@@ -82,11 +154,12 @@ const Home = () => {
       setIsRunning(false);
       setIsDone(true);
       
+      const now = new Date();
       // Create new record with sequential ID
       const newRecord: WatchRecord = {
         id: watchHistory.length + 1,
-        date: new Date().toLocaleDateString(),
-        dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        date: formatDate(now),
+        dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
         time: time
       };
 
@@ -163,6 +236,30 @@ const Home = () => {
            Work Timer
         </h1>
       </div>
+
+      {/* Month Pins Section */}
+      {monthStats.length > 0 && (
+        <div className="w-full max-w-4xl mb-8">
+          <h2 className="text-2xl font-bold text-orange-400 mb-4">Monthly Progress</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {monthStats.map((stat) => (
+              <div
+                key={`${stat.month}-${stat.year}`}
+                className="relative p-4 rounded-lg bg-gray-800 overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold text-orange-400">{stat.month} {stat.year}</h3>
+                  <p className="text-gray-300 mt-2">
+                    Total Time: <span className="text-green-400 font-semibold">{formatTimeInterval(stat.totalSeconds)}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl border border-orange-500/20">
         <div className="text-4xl font-bold text-center mb-6 text-orange-400">
           {formatTime(time)}
