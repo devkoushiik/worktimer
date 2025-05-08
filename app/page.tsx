@@ -1,103 +1,215 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+
+interface WatchRecord {
+  id: number;
+  date: string;
+  dayOfWeek: string;
+  time: number;
+}
+
+const Home = () => {
+  const [time, setTime] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [watchHistory, setWatchHistory] = useState<WatchRecord[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('watchHistory');
+    if (savedHistory) {
+      setWatchHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  // Save to localStorage whenever watchHistory changes
+  useEffect(() => {
+    localStorage.setItem('watchHistory', JSON.stringify(watchHistory));
+  }, [watchHistory]);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isRunning && !isDone) {
+      intervalId = setInterval(() => {
+        setTime((prevTime) => prevTime + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRunning, isDone]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatTimeToHours = (seconds: number) => {
+    return (seconds / 3600).toFixed(2);
+  };
+
+  const handleStart = () => {
+    setIsRunning(true);
+    setIsDone(false);
+  };
+
+  const handlePause = () => {
+    setIsRunning(false);
+  };
+
+  const handleDone = () => {
+    if (time > 0) {
+      setIsRunning(false);
+      setIsDone(true);
+      
+      // Create new record with sequential ID
+      const newRecord: WatchRecord = {
+        id: watchHistory.length + 1,
+        date: new Date().toLocaleDateString(),
+        dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        time: time
+      };
+
+      // Add to history
+      setWatchHistory(prev => [...prev, newRecord]);
+      
+      // Reset timer
+      setTime(0);
+    }
+  };
+
+  const handleDestroyData = () => {
+    if (!showConfirm) {
+      setShowConfirm(true);
+      return;
+    }
+    
+    // Clear the history
+    setWatchHistory([]);
+    // Clear localStorage
+    localStorage.removeItem('watchHistory');
+    // Reset confirmation state
+    setShowConfirm(false);
+  };
+
+  // Calculate totals
+  const totalDays = new Set(watchHistory.map(record => record.date)).size;
+  const totalTimeInHours = watchHistory.reduce((acc, record) => acc + record.time, 0) / 3600;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-4">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl border border-orange-500/20">
+        <div className="text-4xl font-bold text-center mb-6 text-orange-400">
+          {formatTime(time)}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className="flex gap-4 justify-center mb-8">
+          {!isRunning && !isDone && (
+            <button
+              onClick={handleStart}
+              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+            >
+              Start
+            </button>
+          )}
+          {isRunning && (
+            <button
+              onClick={handlePause}
+              className="px-4 py-2 bg-orange-400 text-gray-900 rounded hover:bg-orange-300 transition-colors"
+            >
+              Pause
+            </button>
+          )}
+          {time > 0 && !isDone && (
+            <button
+              onClick={handleDone}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Done
+            </button>
+          )}
+        </div>
+
+        {/* History Table */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-orange-400">Watch History</h2>
+            {watchHistory.length > 0 && (
+              <div className="flex gap-2">
+                {showConfirm ? (
+                  <>
+                    <button
+                      onClick={handleDestroyData}
+                      className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                    >
+                      Confirm Delete
+                    </button>
+                    <button
+                      onClick={() => setShowConfirm(false)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleDestroyData}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                  >
+                    Destroy All Data
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {watchHistory.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-gray-800 border border-orange-500/20">
+                <thead>
+                  <tr className="bg-gray-700">
+                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
+                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
+                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
+                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-300">
+                  {watchHistory.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-700">
+                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
+                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
+                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
+                      <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-700">
+                  <tr>
+                    <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                      Total Days: {totalDays}
+                    </td>
+                    <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                      Total Hours: {formatTimeToHours(totalTimeInHours * 3600)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Home;
