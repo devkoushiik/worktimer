@@ -41,6 +41,9 @@ const Home = () => {
   });
   const [countdown, setCountdown] = useState(10);
   const [isCountdownActive, setIsCountdownActive] = useState(false);
+  const [secretKey, setSecretKey] = useState<string>('');
+  const [showSecretSetup, setShowSecretSetup] = useState(false);
+  const [confirmSecretKey, setConfirmSecretKey] = useState('');
 
   // Get random quote
   useEffect(() => {
@@ -96,6 +99,16 @@ const Home = () => {
       const history = JSON.parse(savedHistory);
       setWatchHistory(history);
       calculateMonthStats(history);
+    }
+  }, []);
+
+  // Load secret key from localStorage on component mount
+  useEffect(() => {
+    const savedSecretKey = localStorage.getItem('secretKey');
+    if (savedSecretKey) {
+      setSecretKey(savedSecretKey);
+    } else {
+      setShowSecretSetup(true);
     }
   }, []);
 
@@ -290,11 +303,73 @@ const Home = () => {
     };
   }, [isCountdownActive, countdown]);
 
+  const handleSetupSecretKey = () => {
+    if (!secretKey.trim()) {
+      toast.error('Please enter a secret key', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    if (secretKey !== confirmSecretKey) {
+      toast.error('Secret keys do not match', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    localStorage.setItem('secretKey', secretKey);
+    setShowSecretSetup(false);
+    toast.success('Secret key setup complete!', {
+      style: {
+        background: '#1F2937',
+        color: '#fff',
+        border: '1px solid #22C55E',
+      },
+      iconTheme: {
+        primary: '#22C55E',
+        secondary: '#fff',
+      },
+    });
+  };
+
   const handleDestroyData = () => {
     if (!showConfirm) {
       setShowConfirm(true);
       setIsCountdownActive(true);
       setCountdown(10);
+      return;
+    }
+
+    // Validate secret key
+    if (confirmSecretKey !== secretKey) {
+      toast.error('Invalid secret key', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
       return;
     }
 
@@ -644,6 +719,56 @@ const Home = () => {
           },
         }}
       />
+      
+      {/* Secret Key Setup Modal */}
+      {showSecretSetup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="relative p-[1px] rounded-lg w-full max-w-md">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+            
+            {/* Content Container */}
+            <div className="relative bg-gray-800/90 p-6 rounded-lg">
+              <h2 className="text-2xl font-bold text-orange-400 mb-4 text-center">
+                Setup Secret Key
+              </h2>
+              <p className="text-gray-300 mb-4 text-center">
+                Setup a easy password, you won't be allowed to reset later.
+              </p>
+              <p className="text-orange-400 mb-4 text-center italic">
+                Suggestion: It can be your computer or phone password.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="Enter your secret key"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="password"
+                    value={confirmSecretKey}
+                    onChange={(e) => setConfirmSecretKey(e.target.value)}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="Confirm your secret key"
+                  />
+                </div>
+                <button
+                  onClick={handleSetupSecretKey}
+                  className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                >
+                  Setup Secret Key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50">
         <div className="relative">
@@ -920,6 +1045,13 @@ const Home = () => {
                                 Please wait {countdown} seconds before confirming...
                               </p>
                             )}
+                            <input
+                              type="password"
+                              value={confirmSecretKey}
+                              onChange={(e) => setConfirmSecretKey(e.target.value)}
+                              className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                              placeholder="Enter your secret key"
+                            />
                             <button
                               onClick={handleDestroyData}
                               disabled={countdown > 0}
@@ -936,6 +1068,7 @@ const Home = () => {
                                 setShowConfirm(false);
                                 setIsCountdownActive(false);
                                 setCountdown(10);
+                                setConfirmSecretKey('');
                               }}
                               className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
                             >
