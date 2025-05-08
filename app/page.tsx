@@ -904,7 +904,7 @@ const Home = () => {
                 </div>
               ) : (
                 <>
-                  <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
+                  <h3 className="text-base sm:text-xl mb-3 sm:mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
                     You have worked for {formatTotalTime(totalTimeInSeconds)} in total
                   </h3>
                   <div className="overflow-x-auto">
@@ -917,71 +917,71 @@ const Home = () => {
                       
                       {/* Content Container */}
                       <div className="relative bg-gray-800/90 rounded-lg overflow-hidden">
-                        <table className="min-w-full">
+                        <table className="min-w-full text-sm sm:text-base">
                           <thead>
                             <tr className="bg-gray-700">
-                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">ID</th>
-                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Date</th>
-                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Day</th>
-                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Time</th>
-                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Actions</th>
+                              <th className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-orange-400 text-center text-xs sm:text-sm">ID</th>
+                              <th className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-orange-400 text-center text-xs sm:text-sm">Date</th>
+                              <th className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-orange-400 text-center text-xs sm:text-sm">Day</th>
+                              <th className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-orange-400 text-center text-xs sm:text-sm">Time</th>
+                              <th className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-orange-400 text-center text-xs sm:text-sm">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="text-gray-300">
                             {watchHistory.map((record) => (
                               <tr key={record.id} className="hover:bg-gray-700">
-                                <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">{record.id}</td>
+                                <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
                                   {editingRecord?.id === record.id ? (
                                     <input
                                       type="text"
                                       value={editingRecord.date}
                                       onChange={(e) => handleInputChange('date', e.target.value)}
-                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
                                       placeholder="5th May, 2025"
                                     />
                                   ) : (
                                     formatReadableDate(record.date)
                                   )}
                                 </td>
-                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
                                   {editingRecord?.id === record.id ? (
                                     <input
                                       type="text"
                                       value={editingRecord.dayOfWeek}
                                       onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
-                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
                                       placeholder="Day of Week"
                                     />
                                   ) : (
                                     record.dayOfWeek
                                   )}
                                 </td>
-                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
                                   {editingRecord?.id === record.id ? (
                                     <input
                                       type="text"
                                       value={editingRecord.time}
                                       onChange={(e) => handleInputChange('time', e.target.value)}
-                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
                                       placeholder="HH:MM:SS"
                                     />
                                   ) : (
                                     formatTime(record.time)
                                   )}
                                 </td>
-                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
                                   {editingRecord?.id === record.id ? (
-                                    <div className="flex gap-2 justify-center">
+                                    <div className="flex gap-1 sm:gap-2 justify-center">
                                       <button
                                         onClick={handleSaveEdit}
-                                        className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                        className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-xs sm:text-sm"
                                       >
                                         Save
                                       </button>
                                       <button
                                         onClick={handleCancelEdit}
-                                        className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                                        className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs sm:text-sm"
                                       >
                                         Cancel
                                       </button>
@@ -989,7 +989,7 @@ const Home = () => {
                                   ) : (
                                     <button
                                       onClick={() => handleEdit(record)}
-                                      className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                                      className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs sm:text-sm"
                                     >
                                       Edit
                                     </button>
@@ -1000,10 +1000,10 @@ const Home = () => {
                           </tbody>
                           <tfoot className="bg-gray-700">
                             <tr>
-                              <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                              <td colSpan={2} className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center font-bold text-orange-400 text-xs sm:text-sm">
                                 Total Days: {totalDays}
                               </td>
-                              <td colSpan={3} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                              <td colSpan={3} className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center font-bold text-orange-400 text-xs sm:text-sm">
                                 Total Time: {formatTime(totalTimeInSeconds)}
                               </td>
                             </tr>
@@ -1015,19 +1015,19 @@ const Home = () => {
 
                   {/* Action Buttons */}
                   <div className="flex flex-col items-center gap-4 mt-6">
-                    <div className="flex flex-wrap justify-center gap-4">
+                    <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
                       {!showConfirm && (
                         <>
                           <button
                             onClick={handleExportPDF}
-                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+                            className="px-2 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap text-xs sm:text-sm"
                           >
                             Export PDF
                           </button>
                           {!showAddDay && (
                             <button
                               onClick={handleAddDay}
-                              className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors whitespace-nowrap"
+                              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors whitespace-nowrap text-xs sm:text-sm"
                             >
                               Add Your Missing Day
                             </button>
@@ -1037,11 +1037,11 @@ const Home = () => {
                       {showConfirm ? (
                         <>
                           <div className="flex flex-col items-center gap-2">
-                            <p className="text-red-500 font-bold text-center">
+                            <p className="text-red-500 font-bold text-center text-xs sm:text-sm">
                               ⚠️ This is a very dangerous operation! ⚠️
                             </p>
                             {countdown > 0 && (
-                              <p className="text-orange-400 text-center">
+                              <p className="text-orange-400 text-center text-xs sm:text-sm">
                                 Please wait {countdown} seconds before confirming...
                               </p>
                             )}
@@ -1049,17 +1049,17 @@ const Home = () => {
                               type="password"
                               value={confirmSecretKey}
                               onChange={(e) => setConfirmSecretKey(e.target.value)}
-                              className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                              className="bg-gray-700 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded w-full text-center text-xs sm:text-sm"
                               placeholder="Enter your secret key"
                             />
                             <button
                               onClick={handleDestroyData}
                               disabled={countdown > 0}
-                              className={`px-4 py-2 ${
+                              className={`px-2 sm:px-4 py-1.5 sm:py-2 ${
                                 countdown > 0 
                                   ? 'bg-gray-600 cursor-not-allowed' 
                                   : 'bg-red-700 hover:bg-red-800'
-                              } text-white rounded transition-colors whitespace-nowrap`}
+                              } text-white rounded transition-colors whitespace-nowrap text-xs sm:text-sm`}
                             >
                               {countdown > 0 ? `Wait ${countdown}s` : 'Confirm Delete'}
                             </button>
@@ -1070,7 +1070,7 @@ const Home = () => {
                                 setCountdown(10);
                                 setConfirmSecretKey('');
                               }}
-                              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
+                              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors whitespace-nowrap text-xs sm:text-sm"
                             >
                               Cancel
                             </button>
@@ -1079,7 +1079,7 @@ const Home = () => {
                       ) : (
                         <button
                           onClick={handleDestroyData}
-                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                          className="px-2 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors whitespace-nowrap text-xs sm:text-sm"
                         >
                           Destroy All Data
                         </button>
