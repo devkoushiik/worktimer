@@ -34,6 +34,12 @@ const Home = () => {
   const [currentQuote, setCurrentQuote] = useState<Quote>({ content: '', author: '' });
   const [isLoadingQuote, setIsLoadingQuote] = useState(true);
   const [editingRecord, setEditingRecord] = useState<EditingRecord | null>(null);
+  const [showAddDay, setShowAddDay] = useState(false);
+  const [newDayData, setNewDayData] = useState({
+    date: '',
+    time: '',
+    dayOfWeek: ''
+  });
 
   // Get random quote
   useEffect(() => {
@@ -456,6 +462,80 @@ const Home = () => {
     }
   };
 
+  const handleAddDay = () => {
+    if (!showAddDay) {
+      setShowAddDay(true);
+      return;
+    }
+
+    // Validate time format (HH:MM:SS)
+    const timeRegex = /^(\d{2}):(\d{2}):(\d{2})$/;
+    if (!timeRegex.test(newDayData.time)) {
+      toast.error('Please enter time in HH:MM:SS format', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    // Parse the readable date back to storage format
+    const dateMatch = newDayData.date.match(/(\d+)(?:st|nd|rd|th) (\w+), (\d{4})/);
+    if (!dateMatch) {
+      toast.error('Please enter date in correct format (e.g., "5th May, 2025")', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    const [_, day, monthName, year] = dateMatch;
+    const month = new Date(`${monthName} 1, 2000`).getMonth() + 1;
+    const formattedDate = `${day.padStart(2, '0')}:${month.toString().padStart(2, '0')}:${year}`;
+
+    // Convert time string to seconds
+    const [hours, minutes, seconds] = newDayData.time.split(':').map(Number);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    // Create new record
+    const newRecord: WatchRecord = {
+      id: watchHistory.length + 1,
+      date: formattedDate,
+      dayOfWeek: newDayData.dayOfWeek,
+      time: totalSeconds
+    };
+
+    // Add to history
+    setWatchHistory(prev => [...prev, newRecord]);
+    setShowAddDay(false);
+    setNewDayData({ date: '', time: '', dayOfWeek: '' });
+
+    toast.success('New day added successfully!', {
+      style: {
+        background: '#1F2937',
+        color: '#fff',
+        border: '1px solid #22C55E',
+      },
+      iconTheme: {
+        primary: '#22C55E',
+        secondary: '#fff',
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-900">
       <Toaster
@@ -713,34 +793,87 @@ const Home = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-center gap-4 mt-6">
-                    <button
-                      onClick={handleExportPDF}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                    >
-                      Export PDF
-                    </button>
-                    {showConfirm ? (
-                      <>
+                  <div className="flex flex-col items-center gap-4 mt-6">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={handleExportPDF}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        Export PDF
+                      </button>
+                      {showConfirm ? (
+                        <>
+                          <button
+                            onClick={handleDestroyData}
+                            className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={() => setShowConfirm(false)}
+                            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
                         <button
                           onClick={handleDestroyData}
-                          className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                         >
-                          Confirm Delete
+                          Destroy All Data
                         </button>
-                        <button
-                          onClick={() => setShowConfirm(false)}
-                          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </>
+                      )}
+                    </div>
+                    {showAddDay ? (
+                      <div className="flex flex-col items-center gap-2 w-full">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                          <input
+                            type="text"
+                            value={newDayData.date}
+                            onChange={(e) => setNewDayData(prev => ({ ...prev, date: e.target.value }))}
+                            className="bg-gray-700 text-white px-2 py-1 rounded w-full sm:w-40 text-center"
+                            placeholder="5th May, 2025"
+                          />
+                          <input
+                            type="text"
+                            value={newDayData.dayOfWeek}
+                            onChange={(e) => setNewDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
+                            className="bg-gray-700 text-white px-2 py-1 rounded w-full sm:w-32 text-center"
+                            placeholder="Day of Week"
+                          />
+                          <input
+                            type="text"
+                            value={newDayData.time}
+                            onChange={(e) => setNewDayData(prev => ({ ...prev, time: e.target.value }))}
+                            className="bg-gray-700 text-white px-2 py-1 rounded w-full sm:w-32 text-center"
+                            placeholder="HH:MM:SS"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleAddDay}
+                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowAddDay(false);
+                              setNewDayData({ date: '', time: '', dayOfWeek: '' });
+                            }}
+                            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <button
-                        onClick={handleDestroyData}
-                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                        onClick={handleAddDay}
+                        className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
                       >
-                        Destroy All Data
+                        Add Your Missing Day
                       </button>
                     )}
                   </div>
