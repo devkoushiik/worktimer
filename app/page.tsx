@@ -545,8 +545,12 @@ const Home = () => {
 
           {/* History Table */}
           <div className="mt-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-orange-400">Work History</h2>
+            <div className="flex flex-col items-center mb-4">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent mb-2">
+                Work History
+              </h2>
+              {/* Gradient Border */}
+              <div className="w-full h-[1px] bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
             </div>
             {watchHistory.length === 0 ? (
               <div className="text-center py-8">
@@ -558,98 +562,109 @@ const Home = () => {
                   You have worked for {formatTotalTime(totalTimeInSeconds)} in total
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-gray-800 border border-orange-500/20">
-                    <thead>
-                      <tr className="bg-gray-700">
-                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
-                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
-                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
-                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
-                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-gray-300">
-                      {watchHistory.map((record) => (
-                        <tr key={record.id} className="hover:bg-gray-700">
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">
-                            {editingRecord?.id === record.id ? (
-                              <input
-                                type="text"
-                                value={editingRecord.date}
-                                onChange={(e) => handleInputChange('date', e.target.value)}
-                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                placeholder="5th May, 2025"
-                              />
-                            ) : (
-                              formatReadableDate(record.date)
-                            )}
-                          </td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">
-                            {editingRecord?.id === record.id ? (
-                              <input
-                                type="text"
-                                value={editingRecord.dayOfWeek}
-                                onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
-                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                placeholder="Day of Week"
-                              />
-                            ) : (
-                              record.dayOfWeek
-                            )}
-                          </td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">
-                            {editingRecord?.id === record.id ? (
-                              <input
-                                type="text"
-                                value={editingRecord.time}
-                                onChange={(e) => handleInputChange('time', e.target.value)}
-                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                placeholder="HH:MM:SS"
-                              />
-                            ) : (
-                              formatTime(record.time)
-                            )}
-                          </td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">
-                            {editingRecord?.id === record.id ? (
-                              <div className="flex gap-2 justify-center">
-                                <button
-                                  onClick={handleSaveEdit}
-                                  className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleEdit(record)}
-                                className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-700">
-                      <tr>
-                        <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                          Total Days: {totalDays}
-                        </td>
-                        <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                          Total Time: {formatTime(totalTimeInSeconds)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                  <div className="relative p-[1px] rounded-lg">
+                    {/* Gradient Border */}
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+                    
+                    {/* Blurry Gradient Background */}
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+                    
+                    {/* Content Container */}
+                    <div className="relative bg-gray-800/90 rounded-lg overflow-hidden">
+                      <table className="min-w-full">
+                        <thead>
+                          <tr className="bg-gray-700">
+                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">ID</th>
+                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Date</th>
+                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Day</th>
+                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Time</th>
+                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-gray-300">
+                          {watchHistory.map((record) => (
+                            <tr key={record.id} className="hover:bg-gray-700">
+                              <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
+                              <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                {editingRecord?.id === record.id ? (
+                                  <input
+                                    type="text"
+                                    value={editingRecord.date}
+                                    onChange={(e) => handleInputChange('date', e.target.value)}
+                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                    placeholder="5th May, 2025"
+                                  />
+                                ) : (
+                                  formatReadableDate(record.date)
+                                )}
+                              </td>
+                              <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                {editingRecord?.id === record.id ? (
+                                  <input
+                                    type="text"
+                                    value={editingRecord.dayOfWeek}
+                                    onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
+                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                    placeholder="Day of Week"
+                                  />
+                                ) : (
+                                  record.dayOfWeek
+                                )}
+                              </td>
+                              <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                {editingRecord?.id === record.id ? (
+                                  <input
+                                    type="text"
+                                    value={editingRecord.time}
+                                    onChange={(e) => handleInputChange('time', e.target.value)}
+                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                    placeholder="HH:MM:SS"
+                                  />
+                                ) : (
+                                  formatTime(record.time)
+                                )}
+                              </td>
+                              <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                {editingRecord?.id === record.id ? (
+                                  <div className="flex gap-2 justify-center">
+                                    <button
+                                      onClick={handleSaveEdit}
+                                      className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={handleCancelEdit}
+                                      className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleEdit(record)}
+                                    className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-700">
+                          <tr>
+                            <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                              Total Days: {totalDays}
+                            </td>
+                            <td colSpan={3} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                              Total Time: {formatTime(totalTimeInSeconds)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
