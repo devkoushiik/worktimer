@@ -38,7 +38,6 @@ const Home = () => {
   const [newDayData, setNewDayData] = useState({
     date: '',
     time: '',
-    dayOfWeek: ''
   });
 
   // Get random quote
@@ -506,34 +505,108 @@ const Home = () => {
     const month = new Date(`${monthName} 1, 2000`).getMonth() + 1;
     const formattedDate = `${day.padStart(2, '0')}:${month.toString().padStart(2, '0')}:${year}`;
 
+    // Get day of week from the date
+    const dateObj = new Date(parseInt(year), month - 1, parseInt(day));
+    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
     // Convert time string to seconds
     const [hours, minutes, seconds] = newDayData.time.split(':').map(Number);
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
-    // Create new record
-    const newRecord: WatchRecord = {
-      id: watchHistory.length + 1,
-      date: formattedDate,
-      dayOfWeek: newDayData.dayOfWeek,
-      time: totalSeconds
-    };
+    // Check if the date belongs to the current month
+    const currentDate = new Date();
+    const isCurrentMonth = month === (currentDate.getMonth() + 1) && 
+                         parseInt(year) === currentDate.getFullYear();
 
-    // Add to history
-    setWatchHistory(prev => [...prev, newRecord]);
+    if (isCurrentMonth) {
+      // Check if there's an existing entry for this date
+      const existingEntryIndex = watchHistory.findIndex(record => record.date === formattedDate);
+
+      if (existingEntryIndex !== -1) {
+        // Update existing entry's time
+        setWatchHistory(prev => prev.map((record, index) => 
+          index === existingEntryIndex 
+            ? { ...record, time: record.time + totalSeconds }
+            : record
+        ));
+
+        toast.success('Time updated for existing day!', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #22C55E',
+          },
+          iconTheme: {
+            primary: '#22C55E',
+            secondary: '#fff',
+          },
+        });
+      } else {
+        // Create new record if no existing entry
+        const newRecord: WatchRecord = {
+          id: watchHistory.length + 1,
+          date: formattedDate,
+          dayOfWeek: dayOfWeek,
+          time: totalSeconds
+        };
+
+        setWatchHistory(prev => [...prev, newRecord]);
+        toast.success('New day added to current month!', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #22C55E',
+          },
+          iconTheme: {
+            primary: '#22C55E',
+            secondary: '#fff',
+          },
+        });
+      }
+    } else {
+      // Only update monthly stats if it's not current month
+      const monthYear = `${monthName} ${year}`;
+      const updatedStats = [...monthStats];
+      const existingMonthIndex = updatedStats.findIndex(
+        stat => stat.month === monthName && stat.year === parseInt(year)
+      );
+
+      if (existingMonthIndex !== -1) {
+        // Update existing month
+        updatedStats[existingMonthIndex].totalSeconds += totalSeconds;
+      } else {
+        // Add new month
+        updatedStats.push({
+          month: monthName,
+          year: parseInt(year),
+          totalSeconds: totalSeconds
+        });
+      }
+
+      // Sort by year and month
+      updatedStats.sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+        return months.indexOf(b.month) - months.indexOf(a.month);
+      });
+
+      setMonthStats(updatedStats);
+      toast.success('New day added to monthly progress!', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #22C55E',
+        },
+        iconTheme: {
+          primary: '#22C55E',
+          secondary: '#fff',
+        },
+      });
+    }
+
     setShowAddDay(false);
-    setNewDayData({ date: '', time: '', dayOfWeek: '' });
-
-    toast.success('New day added successfully!', {
-      style: {
-        background: '#1F2937',
-        color: '#fff',
-        border: '1px solid #22C55E',
-      },
-      iconTheme: {
-        primary: '#22C55E',
-        secondary: '#fff',
-      },
-    });
+    setNewDayData({ date: '', time: '' });
   };
 
   return (
@@ -679,7 +752,13 @@ const Home = () => {
               </div>
               {watchHistory.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
+                  <p className="text-gray-400 text-lg mb-4">No data found. Please add data using the timer above.</p>
+                  <button
+                    onClick={handleAddDay}
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                  >
+                    Add Your Missing Day
+                  </button>
                 </div>
               ) : (
                 <>
@@ -837,13 +916,6 @@ const Home = () => {
                           />
                           <input
                             type="text"
-                            value={newDayData.dayOfWeek}
-                            onChange={(e) => setNewDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
-                            className="bg-gray-700 text-white px-2 py-1 rounded w-full sm:w-32 text-center"
-                            placeholder="Day of Week"
-                          />
-                          <input
-                            type="text"
                             value={newDayData.time}
                             onChange={(e) => setNewDayData(prev => ({ ...prev, time: e.target.value }))}
                             className="bg-gray-700 text-white px-2 py-1 rounded w-full sm:w-32 text-center"
@@ -860,7 +932,7 @@ const Home = () => {
                           <button
                             onClick={() => {
                               setShowAddDay(false);
-                              setNewDayData({ date: '', time: '', dayOfWeek: '' });
+                              setNewDayData({ date: '', time: '' });
                             }}
                             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                           >
