@@ -24,6 +24,28 @@ interface MonthStats {
   totalSeconds: number;
 }
 
+const encryptKey = (key: string): string => {
+  const salt = 'work_timer_salt_2024'; // A constant salt for the encryption
+  let result = '';
+  for (let i = 0; i < key.length; i++) {
+    // XOR each character with the salt character and convert to hex
+    const charCode = key.charCodeAt(i) ^ salt.charCodeAt(i % salt.length);
+    result += charCode.toString(16).padStart(2, '0');
+  }
+  return result;
+};
+
+const decryptKey = (encryptedKey: string): string => {
+  const salt = 'work_timer_salt_2024';
+  let result = '';
+  for (let i = 0; i < encryptedKey.length; i += 2) {
+    // Convert hex back to number and XOR with salt
+    const charCode = parseInt(encryptedKey.substr(i, 2), 16) ^ salt.charCodeAt((i/2) % salt.length);
+    result += String.fromCharCode(charCode);
+  }
+  return result;
+};
+
 const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -106,7 +128,16 @@ const Home = () => {
   useEffect(() => {
     const savedSecretKey = localStorage.getItem('secretKey');
     if (savedSecretKey) {
-      setSecretKey(savedSecretKey);
+      try {
+        // Decrypt the key when loading
+        const decryptedKey = decryptKey(savedSecretKey);
+        setSecretKey(decryptedKey);
+      } catch (error) {
+        console.error('Error decrypting secret key:', error);
+        // If decryption fails, clear the invalid key
+        localStorage.removeItem('secretKey');
+        setShowSecretSetup(true);
+      }
     } else {
       setShowSecretSetup(true);
     }
@@ -334,7 +365,9 @@ const Home = () => {
       return;
     }
 
-    localStorage.setItem('secretKey', secretKey);
+    // Encrypt the key before storing
+    const encryptedKey = encryptKey(secretKey);
+    localStorage.setItem('secretKey', encryptedKey);
     setShowSecretSetup(false);
     toast.success('Secret key setup complete!', {
       style: {
@@ -354,12 +387,14 @@ const Home = () => {
       setShowConfirm(true);
       setIsCountdownActive(true);
       setCountdown(10);
+      setConfirmSecretKey('');
       return;
     }
 
-    // Validate secret key
-    if (confirmSecretKey !== secretKey) {
-      toast.error('Invalid secret key', {
+    // Get the stored encrypted key
+    const storedEncryptedKey = localStorage.getItem('secretKey');
+    if (!storedEncryptedKey) {
+      toast.error('No secret key found', {
         style: {
           background: '#1F2937',
           color: '#fff',
@@ -373,28 +408,63 @@ const Home = () => {
       return;
     }
 
-    // Clear the history
-    setWatchHistory([]);
-    // Clear monthly stats
-    setMonthStats([]);
-    // Clear localStorage
-    localStorage.removeItem('watchHistory');
-    // Reset confirmation state
-    setShowConfirm(false);
-    setIsCountdownActive(false);
-    setCountdown(10);
-    
-    toast.success('All data has been cleared!', {
-      style: {
-        background: '#1F2937',
-        color: '#fff',
-        border: '1px solid #22C55E',
-      },
-      iconTheme: {
-        primary: '#22C55E',
-        secondary: '#fff',
-      },
-    });
+    try {
+      // Decrypt the stored key for comparison
+      const decryptedStoredKey = decryptKey(storedEncryptedKey);
+      
+      // Validate secret key
+      if (confirmSecretKey !== decryptedStoredKey) {
+        toast.error('Invalid secret key', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #F97316',
+          },
+          iconTheme: {
+            primary: '#F97316',
+            secondary: '#fff',
+          },
+        });
+        return;
+      }
+
+      // Clear the history
+      setWatchHistory([]);
+      // Clear monthly stats
+      setMonthStats([]);
+      // Clear localStorage
+      localStorage.removeItem('watchHistory');
+      // Reset confirmation state
+      setShowConfirm(false);
+      setIsCountdownActive(false);
+      setCountdown(10);
+      setConfirmSecretKey('');
+      
+      toast.success('All data has been cleared!', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #22C55E',
+        },
+        iconTheme: {
+          primary: '#22C55E',
+          secondary: '#fff',
+        },
+      });
+    } catch (error) {
+      console.error('Error validating secret key:', error);
+      toast.error('Error validating secret key', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+    }
   };
 
   // Calculate totals
