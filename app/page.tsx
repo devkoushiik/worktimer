@@ -551,195 +551,202 @@ const Home = () => {
           </div>
         )}
 
-        <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl border border-orange-500/20">
-          <div className="text-4xl font-bold text-center mb-6 text-orange-400">
-            {formatTime(time)}
-          </div>
-          <div className="flex gap-4 justify-center mb-8">
-            {!isRunning && !isDone && (
-              <button
-                onClick={handleStart}
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
-              >
-                Start
-              </button>
-            )}
-            {isRunning && (
-              <button
-                onClick={handlePause}
-                className="px-4 py-2 bg-orange-400 text-gray-900 rounded hover:bg-orange-300 transition-colors"
-              >
-                Pause
-              </button>
-            )}
-            {time > 0 && !isDone && (
-              <button
-                onClick={handleDone}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-              >
-                Done
-              </button>
-            )}
-          </div>
-
-          {/* History Table */}
-          <div className="mt-8">
-            <div className="flex flex-col items-center mb-4">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent mb-2">
-                Work History
-              </h2>
-              {/* Gradient Border */}
-              <div className="w-full h-[1px] bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+        {/* main container */}
+        <div className="relative p-[1px] rounded-lg w-full max-w-4xl">
+          {/* Gradient Border */}
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+          
+          {/* Content Container */}
+          <div className="relative bg-gray-800/100 p-8 rounded-lg">
+            <div className="text-4xl font-bold text-center mb-6 text-orange-400">
+              {formatTime(time)}
             </div>
-            {watchHistory.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
+            <div className="flex gap-4 justify-center mb-8">
+              {!isRunning && !isDone && (
+                <button
+                  onClick={handleStart}
+                  className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+                >
+                  Start
+                </button>
+              )}
+              {isRunning && (
+                <button
+                  onClick={handlePause}
+                  className="px-4 py-2 bg-orange-400 text-gray-900 rounded hover:bg-orange-300 transition-colors"
+                >
+                  Pause
+                </button>
+              )}
+              {time > 0 && !isDone && (
+                <button
+                  onClick={handleDone}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Done
+                </button>
+              )}
+            </div>
+
+            {/* History Table */}
+            <div className="mt-8">
+              <div className="flex flex-col items-center mb-4">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent mb-2">
+                  Work History
+                </h2>
+                {/* Gradient Border */}
+                <div className="w-full h-[1px] bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
               </div>
-            ) : (
-              <>
-                <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
-                  You have worked for {formatTotalTime(totalTimeInSeconds)} in total
-                </h3>
-                <div className="overflow-x-auto">
-                  <div className="relative p-[1px] rounded-lg">
-                    {/* Gradient Border */}
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
-                    
-                    {/* Blurry Gradient Background */}
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
-                    
-                    {/* Content Container */}
-                    <div className="relative bg-gray-800/90 rounded-lg overflow-hidden">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="bg-gray-700">
-                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">ID</th>
-                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Date</th>
-                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Day</th>
-                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Time</th>
-                            <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-gray-300">
-                          {watchHistory.map((record) => (
-                            <tr key={record.id} className="hover:bg-gray-700">
-                              <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                              <td className="px-4 py-2 border border-orange-500/20 text-center">
-                                {editingRecord?.id === record.id ? (
-                                  <input
-                                    type="text"
-                                    value={editingRecord.date}
-                                    onChange={(e) => handleInputChange('date', e.target.value)}
-                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                    placeholder="5th May, 2025"
-                                  />
-                                ) : (
-                                  formatReadableDate(record.date)
-                                )}
-                              </td>
-                              <td className="px-4 py-2 border border-orange-500/20 text-center">
-                                {editingRecord?.id === record.id ? (
-                                  <input
-                                    type="text"
-                                    value={editingRecord.dayOfWeek}
-                                    onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
-                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                    placeholder="Day of Week"
-                                  />
-                                ) : (
-                                  record.dayOfWeek
-                                )}
-                              </td>
-                              <td className="px-4 py-2 border border-orange-500/20 text-center">
-                                {editingRecord?.id === record.id ? (
-                                  <input
-                                    type="text"
-                                    value={editingRecord.time}
-                                    onChange={(e) => handleInputChange('time', e.target.value)}
-                                    className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
-                                    placeholder="HH:MM:SS"
-                                  />
-                                ) : (
-                                  formatTime(record.time)
-                                )}
-                              </td>
-                              <td className="px-4 py-2 border border-orange-500/20 text-center">
-                                {editingRecord?.id === record.id ? (
-                                  <div className="flex gap-2 justify-center">
+              {watchHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
+                    You have worked for {formatTotalTime(totalTimeInSeconds)} in total
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <div className="relative p-[1px] rounded-lg">
+                      {/* Gradient Border */}
+                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+                      
+                      {/* Blurry Gradient Background */}
+                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+                      
+                      {/* Content Container */}
+                      <div className="relative bg-gray-800/90 rounded-lg overflow-hidden">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="bg-gray-700">
+                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">ID</th>
+                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Date</th>
+                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Day</th>
+                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Time</th>
+                              <th className="px-4 py-2 border border-orange-500/20 text-orange-400 text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-gray-300">
+                            {watchHistory.map((record) => (
+                              <tr key={record.id} className="hover:bg-gray-700">
+                                <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
+                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                  {editingRecord?.id === record.id ? (
+                                    <input
+                                      type="text"
+                                      value={editingRecord.date}
+                                      onChange={(e) => handleInputChange('date', e.target.value)}
+                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      placeholder="5th May, 2025"
+                                    />
+                                  ) : (
+                                    formatReadableDate(record.date)
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                  {editingRecord?.id === record.id ? (
+                                    <input
+                                      type="text"
+                                      value={editingRecord.dayOfWeek}
+                                      onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
+                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      placeholder="Day of Week"
+                                    />
+                                  ) : (
+                                    record.dayOfWeek
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                  {editingRecord?.id === record.id ? (
+                                    <input
+                                      type="text"
+                                      value={editingRecord.time}
+                                      onChange={(e) => handleInputChange('time', e.target.value)}
+                                      className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                      placeholder="HH:MM:SS"
+                                    />
+                                  ) : (
+                                    formatTime(record.time)
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 border border-orange-500/20 text-center">
+                                  {editingRecord?.id === record.id ? (
+                                    <div className="flex gap-2 justify-center">
+                                      <button
+                                        onClick={handleSaveEdit}
+                                        className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEdit}
+                                        className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
                                     <button
-                                      onClick={handleSaveEdit}
-                                      className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                      onClick={() => handleEdit(record)}
+                                      className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
                                     >
-                                      Save
+                                      Edit
                                     </button>
-                                    <button
-                                      onClick={handleCancelEdit}
-                                      className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => handleEdit(record)}
-                                    className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-gray-700">
+                            <tr>
+                              <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                                Total Days: {totalDays}
+                              </td>
+                              <td colSpan={3} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                                Total Time: {formatTime(totalTimeInSeconds)}
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                        <tfoot className="bg-gray-700">
-                          <tr>
-                            <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                              Total Days: {totalDays}
-                            </td>
-                            <td colSpan={3} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                              Total Time: {formatTime(totalTimeInSeconds)}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                          </tfoot>
+                        </table>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex justify-center gap-4 mt-6">
-                  <button
-                    onClick={handleExportPDF}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                  >
-                    Export PDF
-                  </button>
-                  {showConfirm ? (
-                    <>
+                  {/* Action Buttons */}
+                  <div className="flex justify-center gap-4 mt-6">
+                    <button
+                      onClick={handleExportPDF}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                    >
+                      Export PDF
+                    </button>
+                    {showConfirm ? (
+                      <>
+                        <button
+                          onClick={handleDestroyData}
+                          className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                        >
+                          Confirm Delete
+                        </button>
+                        <button
+                          onClick={() => setShowConfirm(false)}
+                          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
                       <button
                         onClick={handleDestroyData}
-                        className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                       >
-                        Confirm Delete
+                        Destroy All Data
                       </button>
-                      <button
-                        onClick={() => setShowConfirm(false)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={handleDestroyData}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                    >
-                      Destroy All Data
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <footer className="mt-8 text-center">
