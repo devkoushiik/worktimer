@@ -13,6 +13,10 @@ interface WatchRecord {
   time: number;
 }
 
+interface EditingRecord extends Omit<WatchRecord, 'time'> {
+  time: string;
+}
+
 interface MonthStats {
   month: string;
   year: number;
@@ -28,6 +32,7 @@ const Home = () => {
   const [monthStats, setMonthStats] = useState<MonthStats[]>([]);
   const [currentQuote, setCurrentQuote] = useState<Quote>({ content: '', author: '' });
   const [isLoadingQuote, setIsLoadingQuote] = useState(true);
+  const [editingRecord, setEditingRecord] = useState<EditingRecord | null>(null);
 
   // Get random quote
   useEffect(() => {
@@ -50,8 +55,26 @@ const Home = () => {
     getRandomQuote();
   }, []);
 
-  // Format date to DD:MM:YYYY
-  const formatDate = (date: Date): string => {
+  // Format date to readable format (e.g., "5th May, 2025")
+  const formatReadableDate = (dateStr: string): string => {
+    const [day, month, year] = dateStr.split(':').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    // Get day with ordinal suffix
+    const getOrdinalSuffix = (n: number): string => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    
+    const dayWithSuffix = getOrdinalSuffix(date.getDate());
+    const monthName = date.toLocaleString('default', { month: 'long' });
+    
+    return `${dayWithSuffix} ${monthName}, ${year}`;
+  };
+
+  // Format date to DD:MM:YYYY for storage
+  const formatDateForStorage = (date: Date): string => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
@@ -188,7 +211,7 @@ const Home = () => {
       // Create new record with sequential ID
       const newRecord: WatchRecord = {
         id: watchHistory.length + 1,
-        date: formatDate(now),
+        date: formatDateForStorage(now),
         dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
         time: time
       };
@@ -261,6 +284,80 @@ const Home = () => {
     
     // Save the PDF
     doc.save('work-timer-history.pdf');
+  };
+
+  const handleEdit = (record: WatchRecord) => {
+    // Convert seconds to HH:MM:SS format for editing
+    const hours = Math.floor(record.time / 3600);
+    const minutes = Math.floor((record.time % 3600) / 60);
+    const seconds = record.time % 60;
+    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Convert date to readable format for editing
+    const [day, month, year] = record.date.split(':').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    setEditingRecord({ 
+      ...record,
+      time: formattedTime,
+      date: formatReadableDate(record.date)
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingRecord) return;
+
+    // Validate time format (HH:MM:SS)
+    const timeRegex = /^(\d{2}):(\d{2}):(\d{2})$/;
+    if (!timeRegex.test(editingRecord.time)) {
+      alert('Please enter time in HH:MM:SS format');
+      return;
+    }
+
+    // Convert time string to seconds
+    const [hours, minutes, seconds] = editingRecord.time.split(':').map(Number);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    // Parse the readable date back to storage format
+    const dateMatch = editingRecord.date.match(/(\d+)(?:st|nd|rd|th) (\w+), (\d{4})/);
+    if (!dateMatch) {
+      alert('Please enter date in correct format (e.g., "5th May, 2025")');
+      return;
+    }
+
+    const [_, day, monthName, year] = dateMatch;
+    const month = new Date(`${monthName} 1, 2000`).getMonth() + 1;
+    const formattedDate = `${day.padStart(2, '0')}:${month.toString().padStart(2, '0')}:${year}`;
+
+    // Update the record
+    setWatchHistory(prev => prev.map(record => 
+      record.id === editingRecord.id 
+        ? { ...editingRecord, time: totalSeconds, date: formattedDate }
+        : record
+    ));
+
+    setEditingRecord(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecord(null);
+  };
+
+  const handleInputChange = (field: keyof EditingRecord, value: string) => {
+    if (!editingRecord) return;
+    
+    // If it's the time field, ensure proper format
+    if (field === 'time') {
+      // Only allow numbers and colons
+      const sanitizedValue = value.replace(/[^0-9:]/g, '');
+      
+      // Ensure proper HH:MM:SS format
+      if (sanitizedValue.length <= 8) { // Max length for HH:MM:SS
+        setEditingRecord(prev => ({ ...prev!, [field]: sanitizedValue }));
+      }
+    } else {
+      setEditingRecord(prev => ({ ...prev!, [field]: value }));
+    }
   };
 
   return (
@@ -401,15 +498,77 @@ const Home = () => {
                         <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
                         <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
                         <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
+                        <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-300">
                       {watchHistory.map((record) => (
                         <tr key={record.id} className="hover:bg-gray-700">
                           <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
-                          <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">
+                            {editingRecord?.id === record.id ? (
+                              <input
+                                type="text"
+                                value={editingRecord.date}
+                                onChange={(e) => handleInputChange('date', e.target.value)}
+                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                placeholder="5th May, 2025"
+                              />
+                            ) : (
+                              formatReadableDate(record.date)
+                            )}
+                          </td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">
+                            {editingRecord?.id === record.id ? (
+                              <input
+                                type="text"
+                                value={editingRecord.dayOfWeek}
+                                onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
+                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                placeholder="Day of Week"
+                              />
+                            ) : (
+                              record.dayOfWeek
+                            )}
+                          </td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">
+                            {editingRecord?.id === record.id ? (
+                              <input
+                                type="text"
+                                value={editingRecord.time}
+                                onChange={(e) => handleInputChange('time', e.target.value)}
+                                className="bg-gray-700 text-white px-2 py-1 rounded w-full text-center"
+                                placeholder="HH:MM:SS"
+                              />
+                            ) : (
+                              formatTime(record.time)
+                            )}
+                          </td>
+                          <td className="px-4 py-2 border border-orange-500/20 text-center">
+                            {editingRecord?.id === record.id ? (
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEdit(record)}
+                                className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
