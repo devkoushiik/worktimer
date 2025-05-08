@@ -46,13 +46,24 @@ const Home = () => {
   }, [isRunning, isDone]);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatTimeToHours = (seconds: number) => {
-    return (seconds / 3600).toFixed(2);
+  const formatTotalTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (minutes > 0) {
+      return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else {
+      return `${secs} second${secs > 1 ? 's' : ''}`;
+    }
   };
 
   const handleStart = () => {
@@ -101,7 +112,7 @@ const Home = () => {
 
   // Calculate totals
   const totalDays = new Set(watchHistory.map(record => record.date)).size;
-  const totalTimeInHours = watchHistory.reduce((acc, record) => acc + record.time, 0) / 3600;
+  const totalTimeInSeconds = watchHistory.reduce((acc, record) => acc + record.time, 0);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-4">
@@ -173,38 +184,43 @@ const Home = () => {
               <p className="text-gray-400 text-lg">No data found. Please add data using the timer above.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-gray-800 border border-orange-500/20">
-                <thead>
-                  <tr className="bg-gray-700">
-                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
-                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
-                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
-                    <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
-                  </tr>
-                </thead>
-                <tbody className="text-gray-300">
-                  {watchHistory.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-700">
-                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
-                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
-                      <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
-                      <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
+            <>
+              <h3 className="text-xl mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
+                You have worked for {formatTotalTime(totalTimeInSeconds)} in total
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-gray-800 border border-orange-500/20">
+                  <thead>
+                    <tr className="bg-gray-700">
+                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">ID</th>
+                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Date</th>
+                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Day</th>
+                      <th className="px-4 py-2 border border-orange-500/20 text-orange-400">Time</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-700">
-                  <tr>
-                    <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                      Total Days: {totalDays}
-                    </td>
-                    <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
-                      Total Hours: {formatTimeToHours(totalTimeInHours * 3600)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="text-gray-300">
+                    {watchHistory.map((record) => (
+                      <tr key={record.id} className="hover:bg-gray-700">
+                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.id}</td>
+                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.date}</td>
+                        <td className="px-4 py-2 border border-orange-500/20 text-center">{record.dayOfWeek}</td>
+                        <td className="px-4 py-2 border border-orange-500/20 text-center">{formatTime(record.time)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-700">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                        Total Days: {totalDays}
+                      </td>
+                      <td colSpan={2} className="px-4 py-2 border border-orange-500/20 text-center font-bold text-orange-400">
+                        Total Time: {formatTime(totalTimeInSeconds)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
