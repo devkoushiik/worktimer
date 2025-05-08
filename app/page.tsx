@@ -167,11 +167,15 @@ const Home = () => {
   const handleStart = () => {
     setIsRunning(true);
     setIsDone(false);
-    setTime(0); // Reset time when starting new session
+    // Only reset time if it's a new session (time is 0)
+    if (time === 0) {
+      setTime(0);
+    }
   };
 
   const handlePause = () => {
     setIsRunning(false);
+    // Don't reset time when pausing
   };
 
   const handleDone = () => {
