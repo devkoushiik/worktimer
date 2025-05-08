@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { quotes, Quote } from './data/quotes';
 import { FaGithub } from 'react-icons/fa';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface WatchRecord {
   id: number;
@@ -240,6 +241,18 @@ const Home = () => {
     localStorage.removeItem('watchHistory');
     // Reset confirmation state
     setShowConfirm(false);
+    
+    toast.success('All data has been cleared!', {
+      style: {
+        background: '#1F2937',
+        color: '#fff',
+        border: '1px solid #22C55E',
+      },
+      iconTheme: {
+        primary: '#22C55E',
+        secondary: '#fff',
+      },
+    });
   };
 
   // Calculate totals
@@ -284,6 +297,18 @@ const Home = () => {
     
     // Save the PDF
     doc.save('work-timer-history.pdf');
+    
+    toast.success('PDF exported successfully!', {
+      style: {
+        background: '#1F2937',
+        color: '#fff',
+        border: '1px solid #22C55E',
+      },
+      iconTheme: {
+        primary: '#22C55E',
+        secondary: '#fff',
+      },
+    });
   };
 
   const handleEdit = (record: WatchRecord) => {
@@ -310,7 +335,17 @@ const Home = () => {
     // Validate time format (HH:MM:SS)
     const timeRegex = /^(\d{2}):(\d{2}):(\d{2})$/;
     if (!timeRegex.test(editingRecord.time)) {
-      alert('Please enter time in HH:MM:SS format');
+      toast.error('Please enter time in HH:MM:SS format', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
       return;
     }
 
@@ -321,7 +356,17 @@ const Home = () => {
     // Parse the readable date back to storage format
     const dateMatch = editingRecord.date.match(/(\d+)(?:st|nd|rd|th) (\w+), (\d{4})/);
     if (!dateMatch) {
-      alert('Please enter date in correct format (e.g., "5th May, 2025")');
+      toast.error('Please enter date in correct format (e.g., "5th May, 2025")', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
       return;
     }
 
@@ -337,6 +382,18 @@ const Home = () => {
     ));
 
     setEditingRecord(null);
+
+    toast.success('Record updated successfully!', {
+      style: {
+        background: '#1F2937',
+        color: '#fff',
+        border: '1px solid #22C55E',
+      },
+      iconTheme: {
+        primary: '#22C55E',
+        secondary: '#fff',
+      },
+    });
   };
 
   const handleCancelEdit = () => {
@@ -362,6 +419,16 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-900">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+          },
+        }}
+      />
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50">
         <div className="relative">
