@@ -39,6 +39,8 @@ const Home = () => {
     date: '',
     time: '',
   });
+  const [countdown, setCountdown] = useState(10);
+  const [isCountdownActive, setIsCountdownActive] = useState(false);
 
   // Get random quote
   useEffect(() => {
@@ -273,18 +275,39 @@ const Home = () => {
     }
   };
 
+  // Add countdown effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isCountdownActive && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setIsCountdownActive(false);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isCountdownActive, countdown]);
+
   const handleDestroyData = () => {
     if (!showConfirm) {
       setShowConfirm(true);
+      setIsCountdownActive(true);
+      setCountdown(10);
       return;
     }
-    
+
     // Clear the history
     setWatchHistory([]);
+    // Clear monthly stats
+    setMonthStats([]);
     // Clear localStorage
     localStorage.removeItem('watchHistory');
     // Reset confirmation state
     setShowConfirm(false);
+    setIsCountdownActive(false);
+    setCountdown(10);
     
     toast.success('All data has been cleared!', {
       style: {
@@ -753,12 +776,6 @@ const Home = () => {
               {watchHistory.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400 text-lg mb-4">No data found. Please add data using the timer above.</p>
-                  <button
-                    onClick={handleAddDay}
-                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-                  >
-                    Add Your Missing Day
-                  </button>
                 </div>
               ) : (
                 <>
@@ -873,32 +890,63 @@ const Home = () => {
 
                   {/* Action Buttons */}
                   <div className="flex flex-col items-center gap-4 mt-6">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={handleExportPDF}
-                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                      >
-                        Export PDF
-                      </button>
-                      {showConfirm ? (
+                    <div className="flex flex-wrap justify-center gap-4">
+                      {!showConfirm && (
                         <>
                           <button
-                            onClick={handleDestroyData}
-                            className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors"
+                            onClick={handleExportPDF}
+                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
                           >
-                            Confirm Delete
+                            Export PDF
                           </button>
-                          <button
-                            onClick={() => setShowConfirm(false)}
-                            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                          >
-                            Cancel
-                          </button>
+                          {!showAddDay && (
+                            <button
+                              onClick={handleAddDay}
+                              className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors whitespace-nowrap"
+                            >
+                              Add Your Missing Day
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {showConfirm ? (
+                        <>
+                          <div className="flex flex-col items-center gap-2">
+                            <p className="text-red-500 font-bold text-center">
+                              ⚠️ This is a very dangerous operation! ⚠️
+                            </p>
+                            {countdown > 0 && (
+                              <p className="text-orange-400 text-center">
+                                Please wait {countdown} seconds before confirming...
+                              </p>
+                            )}
+                            <button
+                              onClick={handleDestroyData}
+                              disabled={countdown > 0}
+                              className={`px-4 py-2 ${
+                                countdown > 0 
+                                  ? 'bg-gray-600 cursor-not-allowed' 
+                                  : 'bg-red-700 hover:bg-red-800'
+                              } text-white rounded transition-colors whitespace-nowrap`}
+                            >
+                              {countdown > 0 ? `Wait ${countdown}s` : 'Confirm Delete'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowConfirm(false);
+                                setIsCountdownActive(false);
+                                setCountdown(10);
+                              }}
+                              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <button
                           onClick={handleDestroyData}
-                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors whitespace-nowrap"
                         >
                           Destroy All Data
                         </button>
@@ -940,14 +988,7 @@ const Home = () => {
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <button
-                        onClick={handleAddDay}
-                        className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-                      >
-                        Add Your Missing Day
-                      </button>
-                    )}
+                    ) : null}
                   </div>
                 </>
               )}
