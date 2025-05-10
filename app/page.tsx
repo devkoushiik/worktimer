@@ -189,10 +189,16 @@ const Home = () => {
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
+    let startTime: number;
+    let elapsedTime: number = time;
 
     if (isRunning && !isDone) {
+      startTime = Date.now() - (elapsedTime * 1000);
+      
       intervalId = setInterval(() => {
-        setTime((prevTime) => prevTime + 1);
+        const currentTime = Date.now();
+        const newElapsedTime = Math.floor((currentTime - startTime) / 1000);
+        setTime(newElapsedTime);
       }, 1000);
     }
 
