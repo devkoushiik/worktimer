@@ -7,7 +7,7 @@ import { quotes, Quote } from './data/quotes';
 import { FaGithub } from 'react-icons/fa';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchTimers, createTimer, updateTimer, deleteAllTimers, Timer } from './lib/api';
+import { fetchTimers, createTimer, updateTimer, deleteAllTimers, deleteTimer, Timer, getUser, saveSecretKey } from './lib/api';
 import { useTimers, WatchRecord } from './hooks/useTimers';
 
 interface EditingRecord extends Omit<WatchRecord, 'time'> {
@@ -103,6 +103,9 @@ const Home = (): React.JSX.Element => {
   // Add state for delete confirmation modal
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [deletingTimerId, setDeletingTimerId] = useState<string | null>(null);
+
+  // Add loading state for secret key
+  const [isLoadingSecretKey, setIsLoadingSecretKey] = useState<boolean>(true);
 
   const queryClient = useQueryClient();
   
@@ -496,23 +499,43 @@ const Home = (): React.JSX.Element => {
     return () => clearInterval(intervalId);
   }, []); // Empty dependency array since we want this to run only on mount
 
-  // Load secret key from localStorage on component mount
+  // Load secret key from database on component mount
   useEffect(() => {
-    const savedSecretKey = localStorage.getItem('secretKey');
-    if (savedSecretKey) {
+    const loadSecretKey = async () => {
       try {
-        // Decrypt the key when loading
-        const decryptedKey = decryptKey(savedSecretKey);
-        setSecretKey(decryptedKey);
+        setIsLoadingSecretKey(true);
+        const user = await getUser();
+        
+        if (user && user.secretKey) {
+          setSecretKey(user.secretKey);
+          setShowSecretSetup(false);
+        } else {
+          // No user exists yet, show the setup modal
+          setSecretKey('');
+          setShowSecretSetup(true);
+        }
       } catch (error) {
-        console.error('Error decrypting secret key:', error);
-        // If decryption fails, clear the invalid key
-        localStorage.removeItem('secretKey');
+        console.error('Error loading secret key:', error);
+        // In case of error, show the setup modal
+        setSecretKey('');
         setShowSecretSetup(true);
+        toast.error('Failed to load user data', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #F97316',
+          },
+          iconTheme: {
+            primary: '#F97316',
+            secondary: '#fff',
+          },
+        });
+      } finally {
+        setIsLoadingSecretKey(false);
       }
-    } else {
-      setShowSecretSetup(true);
-    }
+    };
+
+    loadSecretKey();
   }, []);
 
   // Update month stats when watch history changes
@@ -647,7 +670,7 @@ const Home = (): React.JSX.Element => {
     };
   }, [isCountdownActive, countdown]);
 
-  const handleSetupSecretKey = () => {
+  const handleSetupSecretKey = async () => {
     if (!secretKey.trim()) {
       toast.error('Please enter a secret key', {
         style: {
@@ -678,21 +701,34 @@ const Home = (): React.JSX.Element => {
       return;
     }
 
-    // Encrypt the key before storing
-    const encryptedKey = encryptKey(secretKey);
-    localStorage.setItem('secretKey', encryptedKey);
-    setShowSecretSetup(false);
-    toast.success('Secret key setup complete!', {
-      style: {
-        background: '#1F2937',
-        color: '#fff',
-        border: '1px solid #22C55E',
-      },
-      iconTheme: {
-        primary: '#22C55E',
-        secondary: '#fff',
-      },
-    });
+    try {
+      await saveSecretKey(secretKey);
+      setShowSecretSetup(false);
+      toast.success('Secret key setup complete!', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #22C55E',
+        },
+        iconTheme: {
+          primary: '#22C55E',
+          secondary: '#fff',
+        },
+      });
+    } catch (error) {
+      console.error('Error saving secret key:', error);
+      toast.error('Failed to save secret key', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+    }
   };
 
   const handleDestroyData = async () => {
@@ -705,9 +741,82 @@ const Home = (): React.JSX.Element => {
     }
 
     try {
-      await deleteAllTimersMutation.mutateAsync();
-    } catch (error) {
+      // Get the current user's secret key from database
+      const user = await getUser();
+      
+      if (!user) {
+        toast.error('User data not found', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #F97316',
+          },
+          iconTheme: {
+            primary: '#F97316',
+            secondary: '#fff',
+          },
+        });
+        return;
+      }
+
+      // Verify countdown is complete and key matches
+      if (countdown > 0) {
+        return;
+      }
+
+      // Verify secret key
+      if (confirmSecretKey !== user.secretKey) {
+        toast.error('Invalid secret key', {
+          style: {
+            background: '#1F2937',
+            color: '#fff',
+            border: '1px solid #F97316',
+          },
+          iconTheme: {
+            primary: '#F97316',
+            secondary: '#fff',
+          },
+        });
+        return;
+      }
+
+      // Call the delete mutation
+      await deleteAllTimersMutation.mutateAsync(confirmSecretKey);
+
+      // Reset all states after successful deletion
+      setShowConfirm(false);
+      setIsCountdownActive(false);
+      setCountdown(10);
+      setConfirmSecretKey('');
+      setWatchHistory([]);
+      setMonthStats([]); // Clear month stats
+      setDataCache(null); // Clear data cache
+
+      toast.success('All data has been cleared!', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #22C55E',
+        },
+        iconTheme: {
+          primary: '#22C55E',
+          secondary: '#fff',
+        },
+      });
+
+    } catch (error: any) {
       console.error('Error in handleDestroyData:', error);
+      toast.error(error.message || 'Failed to delete data', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
     }
   };
 
@@ -1077,7 +1186,22 @@ const Home = (): React.JSX.Element => {
     </div>
   );
 
-  // Modify the table section to include loading states
+  // Add function to check if a date is in current month
+  const isCurrentMonth = (dateStr: string): boolean => {
+    try {
+      const [day, month, year] = dateStr.split(':').map(Number);
+      const recordDate = new Date(year, month - 1, day);
+      const now = new Date();
+      
+      return recordDate.getMonth() === now.getMonth() && 
+             recordDate.getFullYear() === now.getFullYear();
+    } catch (error) {
+      console.error('Error checking current month:', error);
+      return false;
+    }
+  };
+
+  // Modify renderTable to filter current month records
   const renderTable = () => {
     if (isLoading) {
       return <LoadingSpinner />;
@@ -1091,13 +1215,20 @@ const Home = (): React.JSX.Element => {
       );
     }
 
-    if (!timers || timers.length === 0) {
+    // Filter records for current month only
+    const currentMonthRecords = timers.filter(record => isCurrentMonth(record.date));
+
+    if (!currentMonthRecords || currentMonthRecords.length === 0) {
       return (
         <div className="text-center py-8">
-          <p className="text-gray-400 text-lg mb-4">No data found. Please add data using the timer above.</p>
+          <p className="text-gray-400 text-lg mb-4">No records found for current month.</p>
         </div>
       );
     }
+
+    // Calculate totals for current month only
+    const currentMonthTotalDays = new Set(currentMonthRecords.map(record => record.date)).size;
+    const currentMonthTotalTime = currentMonthRecords.reduce((acc, record) => acc + record.time, 0);
 
     return (
       <>
@@ -1126,8 +1257,8 @@ const Home = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && (
+        {/* Confirmation Modal for Data Destruction */}
+        {showConfirm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="relative p-[1px] rounded-lg w-full max-w-md">
               {/* Gradient Border */}
@@ -1135,101 +1266,45 @@ const Home = (): React.JSX.Element => {
               
               {/* Content Container */}
               <div className="relative bg-gray-800/90 p-6 rounded-lg">
-                <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <span className="text-4xl">⚠️</span>
-                  </div>
-                  <h2 className="text-xl font-bold text-red-400 mb-2">Confirm Deletion</h2>
-                  <p className="text-gray-300 mb-6">
-                    Are you sure you want to delete this record? This action cannot be undone.
+                <h2 className="text-xl font-bold text-red-400 mb-4 text-center">⚠️ Confirm Data Destruction</h2>
+                <p className="text-gray-300 mb-4 text-center">
+                  This action will permanently delete all your timer data. This cannot be undone.
+                </p>
+                {isCountdownActive && (
+                  <p className="text-orange-400 text-center mb-4">
+                    Deleting in {countdown} seconds...
                   </p>
-                  <div className="flex justify-center gap-3">
-                    <button
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setDeletingTimerId(null);
-                      }}
-                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleConfirmDelete}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
-                    >
-                      <span>🗑️</span> Yes, Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Missing Day Modal */}
-        {showAddMissingDay && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="relative p-[1px] rounded-lg w-full max-w-md">
-              {/* Gradient Border */}
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-green-400 to-blue-400"></div>
-              
-              {/* Content Container */}
-              <div className="relative bg-gray-800/90 p-6 rounded-lg">
-                <h2 className="text-xl font-bold text-blue-400 mb-4 text-center">📅 Add Missing Day</h2>
+                )}
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 mb-1 text-sm">Date (DD:MM:YYYY)</label>
-                    <input
-                      type="text"
-                      value={missingDayData.date}
-                      onChange={(e) => setMissingDayData(prev => ({ ...prev, date: e.target.value }))}
-                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                      placeholder="01:05:2024"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 mb-1 text-sm">Time (HH:MM)</label>
-                    <input
-                      type="text"
-                      value={missingDayData.time}
-                      onChange={(e) => setMissingDayData(prev => ({ ...prev, time: e.target.value }))}
-                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                      placeholder="02:30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 mb-1 text-sm">Day of Week</label>
-                    <select
-                      value={missingDayData.dayOfWeek}
-                      onChange={(e) => setMissingDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
-                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                    >
-                      <option value="">Select Day</option>
-                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                        <option key={day} value={day}>{day}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex justify-center gap-2 pt-2">
+                  <input
+                    type="password"
+                    value={confirmSecretKey}
+                    onChange={(e) => setConfirmSecretKey(e.target.value)}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="Enter your secret key to confirm"
+                  />
+                  <div className="flex justify-center gap-2">
                     <button
                       onClick={() => {
-                        setShowAddMissingDay(false);
-                        setMissingDayData({ date: '', time: '', dayOfWeek: '' });
+                        setShowConfirm(false);
+                        setIsCountdownActive(false);
+                        setCountdown(10);
+                        setConfirmSecretKey('');
                       }}
                       className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleAddMissingDay}
-                      disabled={!missingDayData.date || !missingDayData.time || !missingDayData.dayOfWeek}
+                      onClick={handleDestroyData}
+                      disabled={!confirmSecretKey || confirmSecretKey !== secretKey || countdown > 0}
                       className={`px-4 py-2 text-white rounded transition-colors ${
-                        missingDayData.date && missingDayData.time && missingDayData.dayOfWeek
-                          ? 'bg-blue-600 hover:bg-blue-700'
+                        confirmSecretKey === secretKey && countdown === 0
+                          ? 'bg-red-600 hover:bg-red-700'
                           : 'bg-gray-600 cursor-not-allowed'
                       }`}
                     >
-                      Add Day
+                      Confirm Destroy
                     </button>
                   </div>
                 </div>
@@ -1239,7 +1314,7 @@ const Home = (): React.JSX.Element => {
         )}
 
         <h3 className="text-base sm:text-xl mb-3 sm:mb-4 text-center bg-gradient-to-r from-green-400 via-orange-400 to-green-400 bg-clip-text text-transparent font-bold">
-          You have worked for {formatTotalTime(totalTimeInSeconds)} in total
+          This month you have worked for {formatTotalTime(currentMonthTotalTime)}
         </h3>
         <div className="overflow-x-auto relative">
           {(createTimerMutation.isPending || updateTimerMutation.isPending || deleteAllTimersMutation.isPending) && (
@@ -1267,10 +1342,10 @@ const Home = (): React.JSX.Element => {
                   </tr>
                 </thead>
                 <tbody className="text-gray-300">
-                  {timers.map((record) => (
+                  {currentMonthRecords.map((record, index) => (
                     <tr key={record.id} className="hover:bg-gray-700">
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
-                        {record.displayId}
+                        {index + 1}
                       </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
                         {editingRecord?.id === record.id ? (
@@ -1352,10 +1427,10 @@ const Home = (): React.JSX.Element => {
                 <tfoot className="bg-gray-700">
                   <tr>
                     <td colSpan={2} className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center font-bold text-orange-400 text-xs sm:text-sm">
-                      Total Days: {totalDays}
+                      Current Month Days: {currentMonthTotalDays}
                     </td>
                     <td colSpan={3} className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center font-bold text-orange-400 text-xs sm:text-sm">
-                      Total Time: {formatTime(totalTimeInSeconds)}
+                      Current Month Time: {formatTime(currentMonthTotalTime)}
                     </td>
                   </tr>
                 </tfoot>
@@ -1387,6 +1462,118 @@ const Home = (): React.JSX.Element => {
         }}
       />
       
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="relative p-[1px] rounded-lg w-full max-w-md">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-red-400 via-orange-400 to-red-400"></div>
+            
+            {/* Content Container */}
+            <div className="relative bg-gray-800/90 p-6 rounded-lg">
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <span className="text-4xl">⚠️</span>
+                </div>
+                <h2 className="text-xl font-bold text-red-400 mb-2">Confirm Deletion</h2>
+                <p className="text-gray-300 mb-6">
+                  Are you sure you want to delete this record? This action cannot be undone.
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeletingTimerId(null);
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                  >
+                    <span>🗑️</span> Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Missing Day Modal */}
+      {showAddMissingDay && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="relative p-[1px] rounded-lg w-full max-w-md">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-green-400 to-blue-400"></div>
+            
+            {/* Content Container */}
+            <div className="relative bg-gray-800/90 p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-blue-400 mb-4 text-center">📅 Add Missing Day</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Date (DD:MM:YYYY)</label>
+                  <input
+                    type="text"
+                    value={missingDayData.date}
+                    onChange={(e) => setMissingDayData(prev => ({ ...prev, date: e.target.value }))}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="01:05:2024"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Time (HH:MM)</label>
+                  <input
+                    type="text"
+                    value={missingDayData.time}
+                    onChange={(e) => setMissingDayData(prev => ({ ...prev, time: e.target.value }))}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="02:30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Day of Week</label>
+                  <select
+                    value={missingDayData.dayOfWeek}
+                    onChange={(e) => setMissingDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                  >
+                    <option value="">Select Day</option>
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                      <option key={day} value={day}>{day}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowAddMissingDay(false);
+                      setMissingDayData({ date: '', time: '', dayOfWeek: '' });
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddMissingDay}
+                    disabled={!missingDayData.date || !missingDayData.time || !missingDayData.dayOfWeek}
+                    className={`px-4 py-2 text-white rounded transition-colors ${
+                      missingDayData.date && missingDayData.time && missingDayData.dayOfWeek
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-gray-600 cursor-not-allowed'
+                    }`}
+                  >
+                    Add Day
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Secret Key Setup Modal */}
       {showSecretSetup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1396,41 +1583,50 @@ const Home = (): React.JSX.Element => {
             
             {/* Content Container */}
             <div className="relative bg-gray-800/90 p-4 sm:p-6 rounded-lg">
-              <h2 className="text-xl sm:text-2xl font-bold text-orange-400 mb-2 sm:mb-4 text-center">
-                Setup Secret Key
-              </h2>
-              <p className="text-sm sm:text-base text-gray-300 mb-2 sm:mb-4 text-center">
-                Setup a easy password, you won't be allowed to reset later.
-              </p>
-              <p className="text-sm sm:text-base text-orange-400 mb-3 sm:mb-4 text-center italic">
-                Suggestion: It can be your computer or phone password.
-              </p>
-              <div className="space-y-3 sm:space-y-4">
-                <div>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
-                    placeholder="Enter your secret key"
-                  />
+              {isLoadingSecretKey ? (
+                <div className="flex flex-col items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mb-4"></div>
+                  <p className="text-gray-300">Loading user data...</p>
                 </div>
-                <div>
-                  <input
-                    type="password"
-                    value={confirmSecretKey}
-                    onChange={(e) => setConfirmSecretKey(e.target.value)}
-                    className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
-                    placeholder="Confirm your secret key"
-                  />
-                </div>
-                <button
-                  onClick={handleSetupSecretKey}
-                  className="w-full px-3 py-1.5 sm:px-4 sm:py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm sm:text-base"
-                >
-                  Setup Secret Key
-                </button>
-              </div>
+              ) : (
+                <>
+                  <h2 className="text-xl sm:text-2xl font-bold text-orange-400 mb-2 sm:mb-4 text-center">
+                    Setup Secret Key
+                  </h2>
+                  <p className="text-sm sm:text-base text-gray-300 mb-2 sm:mb-4 text-center">
+                    Setup an easy password, you won't be allowed to reset later.
+                  </p>
+                  <p className="text-sm sm:text-base text-orange-400 mb-3 sm:mb-4 text-center italic">
+                    Suggestion: It can be your computer or phone password.
+                  </p>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div>
+                      <input
+                        type="password"
+                        value={secretKey}
+                        onChange={(e) => setSecretKey(e.target.value)}
+                        className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
+                        placeholder="Enter your secret key"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="password"
+                        value={confirmSecretKey}
+                        onChange={(e) => setConfirmSecretKey(e.target.value)}
+                        className="bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded w-full text-center text-sm sm:text-base"
+                        placeholder="Confirm your secret key"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSetupSecretKey}
+                      className="w-full px-3 py-1.5 sm:px-4 sm:py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm sm:text-base"
+                    >
+                      Setup Secret Key
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

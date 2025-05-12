@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/app/lib/mongodb';
 import Timer from '@/app/models/Timer';
+import User from '@/app/models/User';
 
 export async function GET() {
   try {
@@ -67,7 +68,27 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const secretKey = searchParams.get('secretKey');
     
+    await connectDB();
+
+    // If secretKey is provided, it's a delete all operation
+    if (secretKey) {
+      // Verify secret key
+      const user = await User.findOne({});
+      if (!user || user.secretKey !== secretKey) {
+        return NextResponse.json(
+          { error: 'Invalid secret key' },
+          { status: 401 }
+        );
+      }
+
+      // Delete all timers
+      await Timer.deleteMany({});
+      return NextResponse.json({ message: 'All timers deleted successfully' });
+    }
+
+    // Single timer deletion
     if (!id) {
       return NextResponse.json(
         { error: 'Timer ID is required' },
@@ -75,7 +96,6 @@ export async function DELETE(request: Request) {
       );
     }
     
-    await connectDB();
     const timer = await Timer.findByIdAndDelete(id);
     
     if (!timer) {

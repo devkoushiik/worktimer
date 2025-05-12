@@ -26,6 +26,14 @@ export interface UpdateTimerInput {
   title?: string;
 }
 
+// User related interfaces and functions
+export interface User {
+  _id: string;
+  secretKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Fetch all timers
 export const fetchTimers = async (): Promise<Timer[]> => {
   const response = await fetch('/api/timers', {
@@ -78,13 +86,14 @@ export const updateTimer = async (data: UpdateTimerInput): Promise<Timer> => {
 };
 
 // Delete all timers
-export const deleteAllTimers = async (): Promise<void> => {
-  const response = await fetch('/api/timers', {
+export const deleteAllTimers = async (secretKey: string): Promise<void> => {
+  const response = await fetch(`/api/timers?secretKey=${secretKey}`, {
     method: 'DELETE',
   });
 
   if (!response.ok) {
-    throw new Error('Failed to delete timers');
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to delete timers');
   }
 };
 
@@ -96,5 +105,38 @@ export const deleteTimer = async (id: string): Promise<void> => {
 
   if (!response.ok) {
     throw new Error('Failed to delete timer');
+  }
+};
+
+// Get user
+export const getUser = async (): Promise<User | null> => {
+  const response = await fetch('/api/user', {
+    method: 'GET',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch user');
+  }
+
+  const data = await response.json();
+  return data.user;
+};
+
+// Save secret key
+export const saveSecretKey = async (secretKey: string): Promise<void> => {
+  const response = await fetch('/api/user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ secretKey }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to save secret key');
   }
 }; 
