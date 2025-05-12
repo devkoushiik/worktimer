@@ -9,6 +9,30 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchTimers, createTimer, updateTimer, deleteAllTimers, deleteTimer, Timer, getUser, saveSecretKey } from './lib/api';
 import { useTimers, WatchRecord } from './hooks/useTimers';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface EditingRecord extends Omit<WatchRecord, 'time'> {
   time: string;
@@ -34,6 +58,12 @@ interface DataCache {
 interface NewDayData {
   date: string;
   time: string;
+}
+
+// Add new interface for chart data
+interface ChartData {
+  date: string;
+  time: number;
 }
 
 const encryptKey = (key: string): string => {
@@ -106,6 +136,9 @@ const Home = (): React.JSX.Element => {
 
   // Add loading state for secret key
   const [isLoadingSecretKey, setIsLoadingSecretKey] = useState<boolean>(true);
+
+  // Add state for chart data
+  const [chartData, setChartData] = useState<ChartData[]>([]);
 
   const queryClient = useQueryClient();
   
@@ -1449,6 +1482,84 @@ const Home = (): React.JSX.Element => {
     }
   }, [timers]);
 
+  // Function to prepare chart data
+  const prepareChartData = (records: WatchRecord[]) => {
+    // Sort records by date (oldest to newest)
+    const sortedRecords = [...records].sort((a, b) => {
+      const [dayA, monthA, yearA] = a.date.split(':').map(Number);
+      const [dayB, monthB, yearB] = b.date.split(':').map(Number);
+      const dateA = new Date(yearA, monthA - 1, dayA);
+      const dateB = new Date(yearB, monthB - 1, dayB);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    // Get only current month's records
+    const currentDate = new Date();
+    const currentMonthRecords = sortedRecords.filter(record => {
+      const [day, month, year] = record.date.split(':').map(Number);
+      const recordDate = new Date(year, month - 1, day);
+      return recordDate.getMonth() === currentDate.getMonth() &&
+             recordDate.getFullYear() === currentDate.getFullYear();
+    });
+
+    setChartData(currentMonthRecords.map(record => ({
+      date: formatReadableDate(record.date),
+      time: record.time / 3600 // Convert seconds to hours
+    })));
+  };
+
+  // Update chart data when timers change
+  useEffect(() => {
+    if (timers && timers.length > 0) {
+      prepareChartData(timers);
+    } else {
+      setChartData([]);
+    }
+  }, [timers]);
+
+  // Chart configuration
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: '#9CA3AF',
+          callback: (value: number) => `${value.toFixed(1)}h`
+        }
+      },
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: '#9CA3AF',
+          maxRotation: 45,
+          minRotation: 45
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#1F2937',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#F97316',
+        borderWidth: 1,
+        callbacks: {
+          label: (context: any) => `Time: ${context.parsed.y.toFixed(1)} hours`
+        }
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-900">
       <Toaster
@@ -1711,6 +1822,53 @@ const Home = (): React.JSX.Element => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add the line graph section after Monthly Progress */}
+        {chartData.length > 0 && (
+          <div className="w-full max-w-4xl mb-8">
+            <div className='flex gap-2 items-center justify-center mb-4'>
+              <span className='text-3xl'>📈</span>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
+                Progress Graph
+              </h2>
+            </div>
+            
+            <div className="relative p-[1px] rounded-lg">
+              {/* Gradient Border */}
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+              
+              {/* Blurry Gradient Background */}
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 via-green-500/10 to-orange-500/10 backdrop-blur-sm"></div>
+              
+              {/* Content Container */}
+              <div className="relative bg-gray-800/90 p-4 rounded-lg">
+                <div className="h-[300px]">
+                  <Line
+                    data={{
+                      labels: chartData.map(data => data.date),
+                      datasets: [
+                        {
+                          data: chartData.map(data => data.time),
+                          borderColor: '#F97316',
+                          backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                          fill: true,
+                          tension: 0.4,
+                          pointBackgroundColor: '#F97316',
+                          pointBorderColor: '#fff',
+                          pointHoverBackgroundColor: '#fff',
+                          pointHoverBorderColor: '#F97316',
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                        }
+                      ]
+                    }}
+                    options={chartOptions}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
