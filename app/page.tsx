@@ -23,6 +23,8 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { CoreScaleOptions } from 'chart.js';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 
 // Register ChartJS components
 ChartJS.register(
@@ -38,6 +40,7 @@ ChartJS.register(
 
 interface EditingRecord extends Omit<WatchRecord, 'time'> {
   time: string;
+  selectedDate: Date | null;
 }
 
 interface MonthStats {
@@ -73,6 +76,12 @@ interface AvailableMonth {
   month: number;
   year: number;
   label: string;
+}
+
+interface MissingDayData {
+  selectedDate: Date | null;
+  time: string;
+  dayOfWeek: string;
 }
 
 const encryptKey = (key: string): string => {
@@ -129,12 +138,8 @@ const Home = (): React.JSX.Element => {
 
   // Add state for the Add Missing Day modal
   const [showAddMissingDay, setShowAddMissingDay] = useState<boolean>(false);
-  const [missingDayData, setMissingDayData] = useState<{
-    date: string;
-    time: string;
-    dayOfWeek: string;
-  }>({
-    date: '',
+  const [missingDayData, setMissingDayData] = useState<MissingDayData>({
+    selectedDate: null,
     time: '',
     dayOfWeek: ''
   });
@@ -926,48 +931,36 @@ const Home = (): React.JSX.Element => {
     const minutes = Math.floor((record.time % 3600) / 60);
     const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     
+    // Convert date string to Date object
+    const [day, month, year] = record.date.split(':').map(Number);
+    const selectedDate = new Date(year, month - 1, day);
+    
     setEditingRecord({ 
       ...record,
-      time: formattedTime
+      time: formattedTime,
+      selectedDate
     });
   };
 
-  const handleInputChange = (field: keyof EditingRecord, value: string) => {
-    if (!editingRecord) return;
+  const handleDateChange = (date: Date | null) => {
+    if (!editingRecord || !date) return;
     
-    // If it's the time field, ensure proper format
-    if (field === 'time') {
-      // Only allow numbers and colons
-      const sanitizedValue = value.replace(/[^0-9:]/, '');
-      // Ensure proper HH:MM format
-      if (sanitizedValue.length <= 5) { // Max length for HH:MM
-        setEditingRecord(prev => ({ ...prev!, [field]: sanitizedValue }));
-      }
-    } else {
-      setEditingRecord(prev => ({ ...prev!, [field]: value }));
-    }
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const formattedDate = formatDateForStorage(date);
+    
+    setEditingRecord(prev => ({
+      ...prev!,
+      date: formattedDate,
+      dayOfWeek,
+      selectedDate: date
+    }));
+    
+    return date;
   };
 
   const handleSaveEdit = async () => {
     if (editingRecord && editingRecord.time) {
       try {
-        // Validate date format (DD:MM:YYYY)
-        const dateRegex = /^(\d{2}):(\d{2}):(\d{4})$/;
-        if (!dateRegex.test(editingRecord.date)) {
-          toast.error('Please enter date in DD:MM:YYYY format (e.g., 01:05:2024)', {
-            style: {
-              background: '#1F2937',
-              color: '#fff',
-              border: '1px solid #F97316',
-            },
-            iconTheme: {
-              primary: '#F97316',
-              secondary: '#fff',
-            },
-          });
-          return;
-        }
-
         // Validate time format (HH:MM)
         const timeRegex = /^(\d{2}):(\d{2})$/;
         if (!timeRegex.test(editingRecord.time)) {
@@ -1013,7 +1006,7 @@ const Home = (): React.JSX.Element => {
         });
 
         setEditingRecord(null);
-        
+
         toast.success('Timer updated successfully!', {
           style: {
             background: '#1F2937',
@@ -1113,10 +1106,38 @@ const Home = (): React.JSX.Element => {
     }
   };
 
-  // Add function to handle missing day submission
+  // Add function to handle missing day date change
+  const handleMissingDayDateChange = (date: Date | null) => {
+    if (!date) return;
+    
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    setMissingDayData(prev => ({
+      ...prev,
+      selectedDate: date,
+      dayOfWeek
+    }));
+  };
+
+  // Update the handleAddMissingDay function
   const handleAddMissingDay = async () => {
     if (!showAddMissingDay) {
       setShowAddMissingDay(true);
+      return;
+    }
+
+    if (!missingDayData.selectedDate || !missingDayData.time) {
+      toast.error('Please select a date and enter time', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
       return;
     }
 
@@ -1137,37 +1158,21 @@ const Home = (): React.JSX.Element => {
       return;
     }
 
-    // Validate date format (DD:MM:YYYY)
-    const dateRegex = /^(\d{2}):(\d{2}):(\d{4})$/;
-    if (!dateRegex.test(missingDayData.date)) {
-      toast.error('Please enter date in DD:MM:YYYY format', {
-        style: {
-          background: '#1F2937',
-          color: '#fff',
-          border: '1px solid #F97316',
-        },
-        iconTheme: {
-          primary: '#F97316',
-          secondary: '#fff',
-        },
-      });
-      return;
-    }
-
     try {
       const [hours, minutes] = missingDayData.time.split(':').map(Number);
       const totalSeconds = (hours * 3600) + (minutes * 60);
+      const formattedDate = formatDateForStorage(missingDayData.selectedDate);
 
       await createOrUpdateTimer({
-        title: `Work Session - ${missingDayData.date}`,
+        title: `Work Session - ${formattedDate}`,
         duration: totalSeconds,
-        date: missingDayData.date,
+        date: formattedDate,
         dayOfWeek: missingDayData.dayOfWeek
       });
 
       setShowAddMissingDay(false);
       setMissingDayData({
-        date: '',
+        selectedDate: null,
         time: '',
         dayOfWeek: ''
       });
@@ -1392,78 +1397,31 @@ const Home = (): React.JSX.Element => {
                         {index + 1}
                       </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
-                        {editingRecord?.id === record.id ? (
-                          <input
-                            type="text"
-                            value={editingRecord.date}
-                            onChange={(e) => handleInputChange('date', e.target.value)}
-                            className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
-                            placeholder="DD:MM:YYYY"
-                          />
-                        ) : (
-                          formatReadableDate(record.date)
-                        )}
+                        {formatReadableDate(record.date)}
                       </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
-                        {editingRecord?.id === record.id ? (
-                          <input
-                            type="text"
-                            value={editingRecord.dayOfWeek}
-                            onChange={(e) => handleInputChange('dayOfWeek', e.target.value)}
-                            className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
-                            placeholder="e.g., Monday"
-                          />
-                        ) : (
-                          record.dayOfWeek
-                        )}
+                        {record.dayOfWeek}
                       </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
-                        {editingRecord?.id === record.id ? (
-                          <input
-                            type="text"
-                            value={editingRecord.time}
-                            onChange={(e) => handleInputChange('time', e.target.value)}
-                            className="bg-gray-700 text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded w-full text-center text-xs sm:text-sm"
-                            placeholder="HH:MM:SS"
-                          />
-                        ) : (
-                          formatTime(record.time)
-                        )}
+                        {formatTime(record.time)}
                       </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 border border-orange-500/20 text-center text-xs sm:text-sm">
-                        {editingRecord?.id === record.id ? (
-                          <div className="flex gap-1 sm:gap-2 justify-center">
-                            <button
-                              onClick={handleSaveEdit}
-                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-xs sm:text-sm"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs sm:text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1 sm:gap-2 justify-center">
-                            <button
-                              onClick={() => handleEdit(record)}
-                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
-                            >
-                              <span>✏️</span>
-                              <span className="hidden sm:inline">Edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRow(record.id)}
-                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
-                            >
-                              <span>🗑️</span>
-                              <span className="hidden sm:inline">Delete</span>
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex gap-1 sm:gap-2 justify-center">
+                          <button
+                            onClick={() => handleEdit(record)}
+                            className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
+                          >
+                            <span>✏️</span>
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRow(record.id)}
+                            className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
+                          >
+                            <span>🗑️</span>
+                            <span className="hidden sm:inline">Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1693,50 +1651,70 @@ const Home = (): React.JSX.Element => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="relative p-[1px] rounded-lg w-full max-w-md">
             {/* Gradient Border */}
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-green-400 to-blue-400"></div>
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
             
             {/* Content Container */}
             <div className="relative bg-gray-800/90 p-6 rounded-lg">
-              <h2 className="text-xl font-bold text-blue-400 mb-4 text-center">📅 Add Missing Day</h2>
+              <h2 className="text-xl font-bold text-orange-400 mb-4 text-center">
+                Add Missing Day
+              </h2>
+              
               <div className="space-y-4">
+                {/* Date Picker */}
                 <div>
-                  <label className="block text-gray-300 mb-1 text-sm">Date (DD:MM:YYYY)</label>
-                  <input
-                    type="text"
-                    value={missingDayData.date}
-                    onChange={(e) => setMissingDayData(prev => ({ ...prev, date: e.target.value }))}
-                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                    placeholder="01:05:2024"
+                  <label className="block text-gray-300 mb-1 text-sm">Date</label>
+                  <DatePicker
+                    selected={missingDayData.selectedDate}
+                    onChange={handleMissingDayDateChange}
+                    dateFormat="dd/MM/yyyy"
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center cursor-pointer"
+                    wrapperClassName="w-full"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    placeholderText="Select date"
+                    maxDate={new Date()} // Prevent selecting future dates
                   />
                 </div>
+
+                {/* Time Input */}
                 <div>
                   <label className="block text-gray-300 mb-1 text-sm">Time (HH:MM)</label>
                   <input
                     type="text"
                     value={missingDayData.time}
-                    onChange={(e) => setMissingDayData(prev => ({ ...prev, time: e.target.value }))}
+                    onChange={(e) => {
+                      const sanitizedValue = e.target.value.replace(/[^0-9:]/, '');
+                      if (sanitizedValue.length <= 5) {
+                        setMissingDayData(prev => ({ ...prev, time: sanitizedValue }));
+                      }
+                    }}
                     className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                    placeholder="02:30"
+                    placeholder="HH:MM"
                   />
                 </div>
+
+                {/* Day of Week (Read-only) */}
                 <div>
                   <label className="block text-gray-300 mb-1 text-sm">Day of Week</label>
-                  <select
+                  <input
+                    type="text"
                     value={missingDayData.dayOfWeek}
-                    onChange={(e) => setMissingDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
-                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                  >
-                    <option value="">Select Day</option>
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                      <option key={day} value={day}>{day}</option>
-                    ))}
-                  </select>
+                    readOnly
+                    className="bg-gray-600 text-white px-4 py-2 rounded w-full text-center cursor-not-allowed"
+                  />
                 </div>
-                <div className="flex justify-center gap-2 pt-2">
+
+                {/* Buttons */}
+                <div className="flex justify-center gap-3 pt-2">
                   <button
                     onClick={() => {
                       setShowAddMissingDay(false);
-                      setMissingDayData({ date: '', time: '', dayOfWeek: '' });
+                      setMissingDayData({
+                        selectedDate: null,
+                        time: '',
+                        dayOfWeek: ''
+                      });
                     }}
                     className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                   >
@@ -1744,14 +1722,9 @@ const Home = (): React.JSX.Element => {
                   </button>
                   <button
                     onClick={handleAddMissingDay}
-                    disabled={!missingDayData.date || !missingDayData.time || !missingDayData.dayOfWeek}
-                    className={`px-4 py-2 text-white rounded transition-colors ${
-                      missingDayData.date && missingDayData.time && missingDayData.dayOfWeek
-                        ? 'bg-blue-600 hover:bg-blue-700'
-                        : 'bg-gray-600 cursor-not-allowed'
-                    }`}
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors flex items-center gap-2"
                   >
-                    Add Day
+                    <span>📅</span> Add Day
                   </button>
                 </div>
               </div>
@@ -1813,6 +1786,85 @@ const Home = (): React.JSX.Element => {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingRecord && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="relative p-[1px] rounded-lg w-full max-w-md">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+            
+            {/* Content Container */}
+            <div className="relative bg-gray-800/90 p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-orange-400 mb-4 text-center">
+                Edit Work Session
+              </h2>
+              
+              <div className="space-y-4">
+                {/* Date Picker */}
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Date</label>
+                  <DatePicker
+                    selected={editingRecord.selectedDate}
+                    onChange={handleDateChange}
+                    dateFormat="dd/MM/yyyy"
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center cursor-pointer"
+                    wrapperClassName="w-full"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    placeholderText="Select date"
+                  />
+                </div>
+
+                {/* Time Input */}
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Time (HH:MM)</label>
+                  <input
+                    type="text"
+                    value={editingRecord.time}
+                    onChange={(e) => {
+                      const sanitizedValue = e.target.value.replace(/[^0-9:]/, '');
+                      if (sanitizedValue.length <= 5) {
+                        setEditingRecord(prev => ({ ...prev!, time: sanitizedValue }));
+                      }
+                    }}
+                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    placeholder="HH:MM"
+                  />
+                </div>
+
+                {/* Day of Week (Read-only) */}
+                <div>
+                  <label className="block text-gray-300 mb-1 text-sm">Day of Week</label>
+                  <input
+                    type="text"
+                    value={editingRecord.dayOfWeek}
+                    readOnly
+                    className="bg-gray-600 text-white px-4 py-2 rounded w-full text-center cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => setEditingRecord(null)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors flex items-center gap-2"
+                  >
+                    <span>💾</span> Save Changes
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2046,6 +2098,64 @@ const Home = (): React.JSX.Element => {
           .animate-gradient-x {
             background-size: 200% 200%;
             animation: gradient-x 15s ease infinite;
+          }
+        `}</style>
+        <style jsx global>{`
+          .react-datepicker {
+            font-family: inherit;
+            background-color: #1F2937;
+            border: 1px solid #F97316;
+            border-radius: 0.5rem;
+          }
+          .react-datepicker__header {
+            background-color: #374151;
+            border-bottom: 1px solid #F97316;
+          }
+          .react-datepicker__current-month,
+          .react-datepicker__day-name,
+          .react-datepicker__day {
+            color: #fff;
+          }
+          .react-datepicker__day:hover {
+            background-color: #4B5563;
+          }
+          .react-datepicker__day--selected {
+            background-color: #F97316;
+            color: #fff;
+          }
+          .react-datepicker__day--keyboard-selected {
+            background-color: #F97316;
+            color: #fff;
+          }
+          .react-datepicker__input-container input {
+            background-color: #374151;
+            border: 1px solid #F97316;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            width: 100%;
+            text-align: center;
+          }
+          .react-datepicker__month-select,
+          .react-datepicker__year-select {
+            background-color: #374151;
+            color: #fff;
+            border: 1px solid #F97316;
+            border-radius: 0.375rem;
+            padding: 0.25rem;
+          }
+          .react-datepicker__month-select option,
+          .react-datepicker__year-select option {
+            background-color: #1F2937;
+          }
+          .react-datepicker__navigation {
+            top: 8px;
+          }
+          .react-datepicker__navigation-icon::before {
+            border-color: #F97316;
+          }
+          .react-datepicker__day--outside-month {
+            color: #6B7280;
           }
         `}</style>
       </div>
