@@ -18,9 +18,11 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  Scale
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { CoreScaleOptions } from 'chart.js';
 
 // Register ChartJS components
 ChartJS.register(
@@ -64,6 +66,13 @@ interface NewDayData {
 interface ChartData {
   date: string;
   time: number;
+}
+
+// Add new interface for available months
+interface AvailableMonth {
+  month: number;
+  year: number;
+  label: string;
 }
 
 const encryptKey = (key: string): string => {
@@ -137,8 +146,10 @@ const Home = (): React.JSX.Element => {
   // Add loading state for secret key
   const [isLoadingSecretKey, setIsLoadingSecretKey] = useState<boolean>(true);
 
-  // Add state for chart data
+  // Add state for chart data and selected month
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<AvailableMonth[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   const queryClient = useQueryClient();
   
@@ -1482,8 +1493,38 @@ const Home = (): React.JSX.Element => {
     }
   }, [timers]);
 
+  // Function to get available months from records
+  const getAvailableMonths = (records: WatchRecord[]) => {
+    const months = new Set<string>();
+    const availableMonths: AvailableMonth[] = [];
+
+    records.forEach(record => {
+      const [_, month, year] = record.date.split(':').map(Number);
+      const monthKey = `${year}-${month}`;
+      if (!months.has(monthKey)) {
+        months.add(monthKey);
+        availableMonths.push({
+          month,
+          year,
+          label: new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+        });
+      }
+    });
+
+    // Sort months in descending order
+    return availableMonths.sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+  };
+
   // Function to prepare chart data
-  const prepareChartData = (records: WatchRecord[]) => {
+  const prepareChartData = (records: WatchRecord[], selectedMonthKey?: string) => {
+    if (!records.length) {
+      setChartData([]);
+      return;
+    }
+
     // Sort records by date (oldest to newest)
     const sortedRecords = [...records].sort((a, b) => {
       const [dayA, monthA, yearA] = a.date.split(':').map(Number);
@@ -1493,29 +1534,56 @@ const Home = (): React.JSX.Element => {
       return dateA.getTime() - dateB.getTime();
     });
 
-    // Get only current month's records
-    const currentDate = new Date();
-    const currentMonthRecords = sortedRecords.filter(record => {
-      const [day, month, year] = record.date.split(':').map(Number);
-      const recordDate = new Date(year, month - 1, day);
-      return recordDate.getMonth() === currentDate.getMonth() &&
-             recordDate.getFullYear() === currentDate.getFullYear();
-    });
+    // Get records for selected month or current month
+    let filteredRecords;
+    if (selectedMonthKey) {
+      const [selectedYear, selectedMonth] = selectedMonthKey.split('-').map(Number);
+      filteredRecords = sortedRecords.filter(record => {
+        const [_, month, year] = record.date.split(':').map(Number);
+        return month === selectedMonth && year === selectedYear;
+      });
+    } else {
+      const currentDate = new Date();
+      filteredRecords = sortedRecords.filter(record => {
+        const [_, month, year] = record.date.split(':').map(Number);
+        return month === currentDate.getMonth() + 1 && 
+               year === currentDate.getFullYear();
+      });
+    }
 
-    setChartData(currentMonthRecords.map(record => ({
+    setChartData(filteredRecords.map(record => ({
       date: formatReadableDate(record.date),
       time: record.time / 3600 // Convert seconds to hours
     })));
   };
 
-  // Update chart data when timers change
+  // Update available months and chart data when timers change
   useEffect(() => {
     if (timers && timers.length > 0) {
-      prepareChartData(timers);
+      const months = getAvailableMonths(timers);
+      setAvailableMonths(months);
+      
+      // Set current month as default if not already selected
+      if (!selectedMonth) {
+        const currentDate = new Date();
+        const currentMonthKey = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}`;
+        setSelectedMonth(currentMonthKey);
+        prepareChartData(timers, currentMonthKey);
+      } else {
+        prepareChartData(timers, selectedMonth);
+      }
     } else {
       setChartData([]);
+      setAvailableMonths([]);
+      setSelectedMonth('');
     }
   }, [timers]);
+
+  // Handle month selection change
+  const handleMonthChange = (monthKey: string) => {
+    setSelectedMonth(monthKey);
+    prepareChartData(timers, monthKey);
+  };
 
   // Chart configuration
   const chartOptions = {
@@ -1523,16 +1591,21 @@ const Home = (): React.JSX.Element => {
     maintainAspectRatio: false,
     scales: {
       y: {
+        type: 'linear' as const,
         beginAtZero: true,
         grid: {
           color: 'rgba(255, 255, 255, 0.1)',
         },
         ticks: {
           color: '#9CA3AF',
-          callback: (value: number) => `${value.toFixed(1)}h`
+          callback: function(this: Scale<CoreScaleOptions>, tickValue: string | number) {
+            const value = Number(tickValue);
+            return `${value.toFixed(1)}h`;
+          }
         }
       },
       x: {
+        type: 'category' as const,
         grid: {
           color: 'rgba(255, 255, 255, 0.1)',
         },
@@ -1554,7 +1627,9 @@ const Home = (): React.JSX.Element => {
         borderColor: '#F97316',
         borderWidth: 1,
         callbacks: {
-          label: (context: any) => `Time: ${context.parsed.y.toFixed(1)} hours`
+          label: function(context: { parsed: { y: number } }) {
+            return `Time: ${context.parsed.y.toFixed(1)} hours`;
+          }
         }
       }
     }
@@ -1827,13 +1902,31 @@ const Home = (): React.JSX.Element => {
         )}
 
         {/* Add the line graph section after Monthly Progress */}
-        {chartData.length > 0 && (
+        {availableMonths.length > 0 && (
           <div className="w-full max-w-4xl mb-8">
             <div className='flex gap-2 items-center justify-center mb-4'>
               <span className='text-3xl'>📈</span>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-green-400 to-orange-400 bg-clip-text text-transparent">
                 Progress Graph
               </h2>
+            </div>
+
+            {/* Month Selector */}
+            <div className="flex justify-center mb-4">
+              <div className="relative p-[1px] rounded-lg inline-block">
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-400 via-green-400 to-orange-400"></div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                  className="relative bg-gray-800 text-white px-4 py-2 rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                >
+                  {availableMonths.map((month) => (
+                    <option key={`${month.year}-${month.month}`} value={`${month.year}-${month.month}`}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             
             <div className="relative p-[1px] rounded-lg">
@@ -1845,29 +1938,35 @@ const Home = (): React.JSX.Element => {
               
               {/* Content Container */}
               <div className="relative bg-gray-800/90 p-4 rounded-lg">
-                <div className="h-[300px]">
-                  <Line
-                    data={{
-                      labels: chartData.map(data => data.date),
-                      datasets: [
-                        {
-                          data: chartData.map(data => data.time),
-                          borderColor: '#F97316',
-                          backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                          fill: true,
-                          tension: 0.4,
-                          pointBackgroundColor: '#F97316',
-                          pointBorderColor: '#fff',
-                          pointHoverBackgroundColor: '#fff',
-                          pointHoverBorderColor: '#F97316',
-                          pointRadius: 4,
-                          pointHoverRadius: 6,
-                        }
-                      ]
-                    }}
-                    options={chartOptions}
-                  />
-                </div>
+                {chartData.length > 0 ? (
+                  <div className="h-[300px]">
+                    <Line
+                      data={{
+                        labels: chartData.map(data => data.date),
+                        datasets: [
+                          {
+                            data: chartData.map(data => data.time),
+                            borderColor: '#F97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#F97316',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#F97316',
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                          }
+                        ]
+                      }}
+                      options={chartOptions}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-gray-400">
+                    No data available for selected month
+                  </div>
+                )}
               </div>
             </div>
           </div>
