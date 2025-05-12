@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchTimers, createTimer, updateTimer, deleteAllTimers, Timer, CreateTimerInput, UpdateTimerInput } from '../lib/api';
+import { fetchTimers, createTimer, updateTimer, deleteAllTimers, deleteTimer, Timer, CreateTimerInput, UpdateTimerInput } from '../lib/api';
 
 export interface WatchRecord {
   id: string;
@@ -142,6 +142,30 @@ export function useTimers() {
     },
   });
 
+  // Delete single timer mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteTimer,
+    onMutate: async (timerId: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousTimers = queryClient.getQueryData<Timer[]>(queryKey);
+
+      if (previousTimers) {
+        const optimisticUpdate = previousTimers.filter(timer => timer._id !== timerId);
+        queryClient.setQueryData(queryKey, optimisticUpdate);
+      }
+
+      return { previousTimers };
+    },
+    onError: (err, timerId, context) => {
+      if (context?.previousTimers) {
+        queryClient.setQueryData(queryKey, context.previousTimers);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   // New function to handle creating or updating a timer
   const createOrUpdateTimer = async (data: {
     title: string;
@@ -196,10 +220,11 @@ export function useTimers() {
     createTimer: createMutation.mutateAsync,
     updateTimer: updateMutation.mutateAsync,
     deleteAllTimers: deleteAllMutation.mutateAsync,
+    deleteTimer: deleteMutation.mutateAsync,
     createOrUpdateTimer,
     prefetchTimer,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
-    isDeleting: deleteAllMutation.isPending,
+    isDeleting: deleteAllMutation.isPending || deleteMutation.isPending,
   };
 } 

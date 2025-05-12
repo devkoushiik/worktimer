@@ -88,6 +88,22 @@ const Home = (): React.JSX.Element => {
   // Add cache state
   const [dataCache, setDataCache] = useState<DataCache | null>(null);
 
+  // Add state for the Add Missing Day modal
+  const [showAddMissingDay, setShowAddMissingDay] = useState<boolean>(false);
+  const [missingDayData, setMissingDayData] = useState<{
+    date: string;
+    time: string;
+    dayOfWeek: string;
+  }>({
+    date: '',
+    time: '',
+    dayOfWeek: ''
+  });
+
+  // Add state for delete confirmation modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [deletingTimerId, setDeletingTimerId] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
   
   // Replace the React Query usage with useTimers hook
@@ -95,7 +111,8 @@ const Home = (): React.JSX.Element => {
     timers, 
     isLoading, 
     isError,
-    createOrUpdateTimer 
+    createOrUpdateTimer,
+    deleteTimer 
   } = useTimers();
 
   // Create timer mutation
@@ -943,6 +960,110 @@ const Home = (): React.JSX.Element => {
     }
   };
 
+  // Add function to handle missing day submission
+  const handleAddMissingDay = async () => {
+    if (!showAddMissingDay) {
+      setShowAddMissingDay(true);
+      return;
+    }
+
+    // Validate time format (HH:MM)
+    const timeRegex = /^(\d{2}):(\d{2})$/;
+    if (!timeRegex.test(missingDayData.time)) {
+      toast.error('Please enter time in HH:MM format', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    // Validate date format (DD:MM:YYYY)
+    const dateRegex = /^(\d{2}):(\d{2}):(\d{4})$/;
+    if (!dateRegex.test(missingDayData.date)) {
+      toast.error('Please enter date in DD:MM:YYYY format', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+      return;
+    }
+
+    try {
+      const [hours, minutes] = missingDayData.time.split(':').map(Number);
+      const totalSeconds = (hours * 3600) + (minutes * 60);
+
+      await createOrUpdateTimer({
+        title: `Work Session - ${missingDayData.date}`,
+        duration: totalSeconds,
+        date: missingDayData.date,
+        dayOfWeek: missingDayData.dayOfWeek
+      });
+
+      setShowAddMissingDay(false);
+      setMissingDayData({
+        date: '',
+        time: '',
+        dayOfWeek: ''
+      });
+
+      toast.success('Missing day added successfully!', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #22C55E',
+        },
+        iconTheme: {
+          primary: '#22C55E',
+          secondary: '#fff',
+        },
+      });
+    } catch (error) {
+      console.error('Error adding missing day:', error);
+      toast.error('Failed to add missing day', {
+        style: {
+          background: '#1F2937',
+          color: '#fff',
+          border: '1px solid #F97316',
+        },
+        iconTheme: {
+          primary: '#F97316',
+          secondary: '#fff',
+        },
+      });
+    }
+  };
+
+  // Update delete handler
+  const handleDeleteRow = (id: string) => {
+    setDeletingTimerId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deletingTimerId) {
+      try {
+        await deleteTimer(deletingTimerId);
+        setShowDeleteConfirm(false);
+        setDeletingTimerId(null);
+      } catch (error) {
+        console.error('Error in handleConfirmDelete:', error);
+      }
+    }
+  };
+
   // Add Loading Spinner Component
   const LoadingSpinner = ({ size = 'default' }: { size?: 'mini' | 'default' }) => (
     <div className={`flex items-center justify-center ${size === 'mini' ? 'h-6' : 'h-32'}`}>
@@ -988,6 +1109,12 @@ const Home = (): React.JSX.Element => {
             >
               <span>📊</span> Export Data
             </button>
+            <button
+              onClick={() => setShowAddMissingDay(true)}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm flex items-center gap-1"
+            >
+              <span>📅</span> Add Missing Day
+            </button>
           </div>
           <div>
             <button
@@ -999,8 +1126,8 @@ const Home = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* Confirmation Modal for Data Destruction */}
-        {showConfirm && (
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="relative p-[1px] rounded-lg w-full max-w-md">
               {/* Gradient Border */}
@@ -1008,43 +1135,101 @@ const Home = (): React.JSX.Element => {
               
               {/* Content Container */}
               <div className="relative bg-gray-800/90 p-6 rounded-lg">
-                <h2 className="text-xl font-bold text-red-400 mb-4 text-center">⚠️ Confirm Data Destruction</h2>
-                <p className="text-gray-300 mb-4 text-center">
-                  This action will permanently delete all your timer data. This cannot be undone.
-                </p>
-                {isCountdownActive && (
-                  <p className="text-orange-400 text-center mb-4">
-                    Deleting in {countdown} seconds...
+                <div className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <span className="text-4xl">⚠️</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-red-400 mb-2">Confirm Deletion</h2>
+                  <p className="text-gray-300 mb-6">
+                    Are you sure you want to delete this record? This action cannot be undone.
                   </p>
-                )}
-                <div className="space-y-4">
-                  <input
-                    type="password"
-                    value={confirmSecretKey}
-                    onChange={(e) => setConfirmSecretKey(e.target.value)}
-                    className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
-                    placeholder="Enter your secret key to confirm"
-                  />
-                  <div className="flex justify-center gap-2">
+                  <div className="flex justify-center gap-3">
                     <button
                       onClick={() => {
-                        setShowConfirm(false);
-                        setIsCountdownActive(false);
-                        setCountdown(10);
-                        setConfirmSecretKey('');
+                        setShowDeleteConfirm(false);
+                        setDeletingTimerId(null);
                       }}
                       className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleDestroyData}
-                      disabled={!confirmSecretKey || confirmSecretKey !== secretKey}
+                      onClick={handleConfirmDelete}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                    >
+                      <span>🗑️</span> Yes, Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Missing Day Modal */}
+        {showAddMissingDay && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative p-[1px] rounded-lg w-full max-w-md">
+              {/* Gradient Border */}
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-green-400 to-blue-400"></div>
+              
+              {/* Content Container */}
+              <div className="relative bg-gray-800/90 p-6 rounded-lg">
+                <h2 className="text-xl font-bold text-blue-400 mb-4 text-center">📅 Add Missing Day</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-gray-300 mb-1 text-sm">Date (DD:MM:YYYY)</label>
+                    <input
+                      type="text"
+                      value={missingDayData.date}
+                      onChange={(e) => setMissingDayData(prev => ({ ...prev, date: e.target.value }))}
+                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                      placeholder="01:05:2024"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 mb-1 text-sm">Time (HH:MM)</label>
+                    <input
+                      type="text"
+                      value={missingDayData.time}
+                      onChange={(e) => setMissingDayData(prev => ({ ...prev, time: e.target.value }))}
+                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                      placeholder="02:30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 mb-1 text-sm">Day of Week</label>
+                    <select
+                      value={missingDayData.dayOfWeek}
+                      onChange={(e) => setMissingDayData(prev => ({ ...prev, dayOfWeek: e.target.value }))}
+                      className="bg-gray-700 text-white px-4 py-2 rounded w-full text-center"
+                    >
+                      <option value="">Select Day</option>
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-center gap-2 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowAddMissingDay(false);
+                        setMissingDayData({ date: '', time: '', dayOfWeek: '' });
+                      }}
+                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddMissingDay}
+                      disabled={!missingDayData.date || !missingDayData.time || !missingDayData.dayOfWeek}
                       className={`px-4 py-2 text-white rounded transition-colors ${
-                        confirmSecretKey === secretKey ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 cursor-not-allowed'
+                        missingDayData.date && missingDayData.time && missingDayData.dayOfWeek
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-gray-600 cursor-not-allowed'
                       }`}
                     >
-                      Confirm Destroy
+                      Add Day
                     </button>
                   </div>
                 </div>
@@ -1143,12 +1328,22 @@ const Home = (): React.JSX.Element => {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleEdit(record)}
-                            className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs sm:text-sm"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-1 sm:gap-2 justify-center">
+                            <button
+                              onClick={() => handleEdit(record)}
+                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
+                            >
+                              <span>✏️</span>
+                              <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRow(record.id)}
+                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm flex items-center gap-1"
+                            >
+                              <span>🗑️</span>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

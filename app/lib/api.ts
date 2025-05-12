@@ -86,4 +86,15 @@ export const deleteAllTimers = async (): Promise<void> => {
   if (!response.ok) {
     throw new Error('Failed to delete timers');
   }
+};
+
+// Delete a single timer
+export const deleteTimer = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/timers?id=${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete timer');
+  }
 }; 
